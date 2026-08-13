@@ -1,0 +1,382 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#121212" />
+    <meta
+      name="description"
+      content="App de agendamento para barbearia com agenda, servicos, barbeiros, relatorios e controle financeiro."
+    />
+    <title>Agenda Barbearia</title>
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" href="icons/icon-192.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="icons/icon-192.svg" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Barbearia</p>
+          <h1>Agenda Barbearia</h1>
+        </div>
+        <button class="icon-button" id="installButton" type="button" hidden aria-label="Instalar app">
+          <span aria-hidden="true">+</span>
+        </button>
+      </header>
+
+      <main>
+        <section class="hero-section">
+          <div class="hero-copy">
+            <p class="status-pill" id="openStatus">Aberto hoje</p>
+            <h2>Marque seu horario em poucos toques.</h2>
+            <p>
+              Escolha o servico, barbeiro e horario. Atendemos de segunda a sabado.
+            </p>
+          </div>
+          <div class="today-panel admin-only" aria-label="Resumo da agenda de hoje" hidden>
+            <span>Hoje</span>
+            <strong id="todayCount">0</strong>
+            <small>agendamentos</small>
+          </div>
+        </section>
+
+        <nav class="tabs" aria-label="Areas do app">
+          <button class="tab active" data-view="booking" type="button">Agendar</button>
+          <button class="tab" id="loginTab" data-view="login" type="button">Area restrita</button>
+          <button class="tab admin-only" data-view="schedule" type="button" hidden>Agenda</button>
+          <button class="tab admin-only" data-view="reports" type="button" hidden>Relatórios</button>
+          <button class="tab admin-only" data-view="financial" type="button" hidden>Financeiro</button>
+          <button class="tab admin-only" data-view="admin" type="button" hidden>Painel</button>
+          <button class="tab admin-only logout-tab" id="logoutButton" type="button" hidden>Sair</button>
+        </nav>
+
+        <div class="user-badge admin-only" id="userBadge" hidden>
+          <span>👤 Conectado: <strong id="loggedBarberName">Usuário</strong></span>
+        </div>
+
+        <!-- TELA DE AGENDAMENTO (Pública) -->
+        <section class="view active" id="bookingView" aria-labelledby="bookingTitle">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Cliente</p>
+              <h3 id="bookingTitle">Novo agendamento</h3>
+            </div>
+          </div>
+
+          <div class="warning-box" id="sundayNotice" hidden>
+            ⚠️ A barbearia está fechada aos domingos. Por favor, selecione outra data de segunda a sábado.
+          </div>
+
+          <form class="booking-form" id="bookingForm">
+            <label>
+              Nome
+              <input id="clientName" name="clientName" autocomplete="name" required placeholder="Seu nome" />
+            </label>
+
+            <label>
+              WhatsApp
+              <input id="clientPhone" name="clientPhone" inputmode="tel" autocomplete="tel" required placeholder="(00) 00000-0000" />
+            </label>
+
+            <label>
+              Servico
+              <select id="serviceSelect" name="service" required></select>
+            </label>
+
+            <label>
+              Barbeiro
+              <select id="barberSelect" name="barber" required></select>
+            </label>
+
+            <label>
+              Data
+              <input id="dateInput" name="date" type="date" required />
+            </label>
+
+            <label>
+              Observacao
+              <textarea id="notesInput" name="notes" rows="3" placeholder="Ex: maquina baixa, barba desenhada"></textarea>
+            </label>
+
+            <div class="time-area">
+              <div class="field-label">Horarios disponiveis</div>
+              <div class="time-grid" id="timeGrid"></div>
+              <input id="timeInput" name="time" type="hidden" required />
+            </div>
+
+            <button class="primary-button" id="submitBookingBtn" type="submit">Confirmar agendamento</button>
+          </form>
+        </section>
+
+        <!-- TELA DE LOGIN -->
+        <section class="view" id="loginView" aria-labelledby="loginTitle">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Restrito</p>
+              <h3 id="loginTitle">Entrar na Área Restrita</h3>
+            </div>
+          </div>
+
+          <form class="login-form" id="loginForm">
+            <label>
+              Nome de Usuário (Login)
+              <input id="loginUsername" type="text" autocomplete="username" required placeholder="Ex: matheus" />
+            </label>
+            <label>
+              Senha
+              <input id="adminPassword" type="password" autocomplete="current-password" required placeholder="Digite sua senha" />
+            </label>
+            <button class="primary-button" type="submit">Entrar na Área Restrita</button>
+          </form>
+        </section>
+
+        <!-- TELA DE AGENDA (Restrita) -->
+        <section class="view admin-only" id="scheduleView" aria-labelledby="scheduleTitle" hidden>
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Agenda</p>
+              <h3 id="scheduleTitle">Atendimentos</h3>
+            </div>
+            <div class="inline-filters">
+              <label class="inline-label">
+                Barbeiro:
+                <select id="scheduleBarberFilter"></select>
+              </label>
+              <input id="scheduleDate" type="date" aria-label="Data da agenda" />
+            </div>
+          </div>
+          <div class="appointments-list" id="appointmentsList"></div>
+        </section>
+
+        <!-- TELA DE RELATÓRIOS (Restrita) -->
+        <section class="view admin-only" id="reportsView" aria-labelledby="reportsTitle" hidden>
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Relatórios</p>
+              <h3 id="reportsTitle">Desempenho & Cortes do Mês</h3>
+            </div>
+            <div class="inline-filters">
+              <label class="inline-label">
+                Barbeiro:
+                <select id="reportBarberFilter"></select>
+              </label>
+              <label class="inline-label">
+                Mês:
+                <input id="reportMonth" type="month" />
+              </label>
+            </div>
+          </div>
+
+          <div class="kpi-grid">
+            <div class="kpi-card">
+              <span class="kpi-label">Cortes de Cabelo</span>
+              <strong class="kpi-value" id="reportHaircutsCount">0</strong>
+              <small class="kpi-sub" id="reportCortesSub">Cortes realizados no mês</small>
+            </div>
+            <div class="kpi-card">
+              <span class="kpi-label">Total de Agendamentos</span>
+              <strong class="kpi-value" id="reportTotalAppointments">0</strong>
+              <small class="kpi-sub" id="reportCompletedSub">0 concluídos</small>
+            </div>
+            <div class="kpi-card">
+              <span class="kpi-label">Receita de Agendamentos</span>
+              <strong class="kpi-value" id="reportAppointmentRevenue">R$ 0</strong>
+              <small class="kpi-sub">Serviços concluídos</small>
+            </div>
+            <div class="kpi-card highlight">
+              <span class="kpi-label">Faturamento Total</span>
+              <strong class="kpi-value" id="reportTotalRevenue">R$ 0</strong>
+              <small class="kpi-sub">Serviços + Vendas</small>
+            </div>
+          </div>
+
+          <div class="admin-grid" style="margin-top: 18px;">
+            <div class="admin-box">
+              <h4>Detalhamento por Serviço</h4>
+              <div class="table-container" id="reportServiceBreakdown"></div>
+            </div>
+            <div class="admin-box" style="grid-column: span 2;">
+              <h4>Atendimentos do Mês Selecionado</h4>
+              <div class="appointments-list" id="reportAppointmentsList"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- TELA FINANCEIRA (Restrita) -->
+        <section class="view admin-only" id="financialView" aria-labelledby="financialTitle" hidden>
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Financeiro</p>
+              <h3 id="financialTitle">Controle Financeiro & Produtos</h3>
+            </div>
+          </div>
+
+          <div class="kpi-grid">
+            <div class="kpi-card">
+              <span class="kpi-label">Vendas de Produtos</span>
+              <strong class="kpi-value" id="finProductRevenue">R$ 0</strong>
+              <small class="kpi-sub" id="finProductCount">0 itens vendidos</small>
+            </div>
+            <div class="kpi-card">
+              <span class="kpi-label">Entradas de Serviços</span>
+              <strong class="kpi-value" id="finServiceRevenue">R$ 0</strong>
+              <small class="kpi-sub">Agendamentos concluídos</small>
+            </div>
+            <div class="kpi-card highlight">
+              <span class="kpi-label">Total Faturado</span>
+              <strong class="kpi-value" id="finTotalRevenue">R$ 0</strong>
+              <small class="kpi-sub">Serviços + Produtos + Lançamentos</small>
+            </div>
+          </div>
+
+          <div class="admin-grid" style="margin-top: 18px;">
+            <form class="admin-box" id="productForm">
+              <h4>Cadastrar / Gerenciar Produtos</h4>
+              <label>
+                Nome do produto
+                <input id="newProductName" required placeholder="Ex: Pomada Modeladora" />
+              </label>
+              <div class="inline-fields">
+                <label>
+                  Preço (R$)
+                  <input id="newProductPrice" type="number" min="0" step="1" required placeholder="35" />
+                </label>
+                <label>
+                  Estoque
+                  <input id="newProductStock" type="number" min="0" step="1" required placeholder="10" />
+                </label>
+              </div>
+              <button type="submit" class="secondary-button">Adicionar produto</button>
+
+              <h4 style="margin-top: 10px;">Catálogo de Produtos</h4>
+              <div class="table-container" id="productsList"></div>
+            </form>
+
+            <form class="admin-box" id="saleForm" style="grid-column: span 2;">
+              <h4>Registrar Venda / Lançamento</h4>
+              <div class="inline-fields">
+                <label>
+                  Tipo
+                  <select id="saleType" required>
+                    <option value="produto">Venda de Produto</option>
+                    <option value="servico">Serviço (Manual)</option>
+                    <option value="outro">Outra Entrada</option>
+                  </select>
+                </label>
+                <label id="saleProductSelectLabel">
+                  Produto
+                  <select id="saleProductSelect"></select>
+                </label>
+                <label id="saleServiceSelectLabel" hidden>
+                  Serviço
+                  <select id="saleServiceSelect"></select>
+                </label>
+              </div>
+
+              <label>
+                Descrição / Detalhes
+                <input id="saleDescription" required placeholder="Ex: Venda de Pomada para cliente" />
+              </label>
+
+              <div class="inline-fields">
+                <label>
+                  Quantidade
+                  <input id="saleQuantity" type="number" min="1" step="1" value="1" required />
+                </label>
+                <label>
+                  Valor Total (R$)
+                  <input id="saleAmount" type="number" min="0" step="1" required placeholder="35" />
+                </label>
+                <label>
+                  Data
+                  <input id="saleDate" type="date" required />
+                </label>
+              </div>
+              <button type="submit" class="secondary-button">Registrar Venda</button>
+
+              <h4 style="margin-top: 12px;">Histórico de Vendas</h4>
+              <div class="table-container" id="salesList"></div>
+            </form>
+          </div>
+        </section>
+
+        <!-- TELA DE ADMINISTRAÇÃO (Restrita - Apenas Admin) -->
+        <section class="view admin-only" id="adminView" aria-labelledby="adminTitle" hidden>
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Administracao</p>
+              <h3 id="adminTitle">Controle da barbearia</h3>
+            </div>
+          </div>
+
+          <div class="admin-grid">
+            <form class="admin-box" id="serviceForm">
+              <h4>Servicos</h4>
+              <label>
+                Nome
+                <input id="newServiceName" required placeholder="Ex: Corte degradê" />
+              </label>
+              <div class="inline-fields">
+                <label>
+                  Preco
+                  <input id="newServicePrice" type="number" min="0" step="1" required placeholder="45" />
+                </label>
+                <label>
+                  Duracao (min)
+                  <input id="newServiceDuration" type="number" min="15" step="5" required placeholder="40" />
+                </label>
+              </div>
+              <button type="submit" class="secondary-button">Adicionar servico</button>
+              <div class="chip-list" id="servicesList"></div>
+            </form>
+
+            <form class="admin-box" id="barberForm">
+              <h4>🔑 Cadastrar Login de Barbeiro</h4>
+              <p style="margin: 4px 0 12px; font-size: 0.82rem; color: var(--muted);">
+                Crie acessos para que cada barbeiro possa entrar na sua própria área restrita.
+              </p>
+              <label>
+                Nome do Barbeiro
+                <input id="newBarberName" required placeholder="Ex: Matheus" />
+              </label>
+              <label>
+                Nome de Usuário (Login)
+                <input id="newBarberUsername" required placeholder="Ex: matheus" />
+              </label>
+              <label>
+                Senha de Acesso
+                <input id="newBarberPassword" type="password" required placeholder="Ex: 1234" />
+              </label>
+              <button type="submit" class="secondary-button">Criar Login de Barbeiro</button>
+
+              <h4 style="margin-top: 18px; margin-bottom: 8px;">Logins Cadastrados</h4>
+              <div class="table-container" id="barbersList"></div>
+            </form>
+
+            <form class="admin-box" id="blockForm">
+              <h4>Bloquear horario</h4>
+              <label>
+                Data
+                <input id="blockDate" type="date" required />
+              </label>
+              <label>
+                Barbeiro
+                <select id="blockBarber" required></select>
+              </label>
+              <label>
+                Horario
+                <select id="blockTime" required></select>
+              </label>
+              <button type="submit" class="secondary-button">Bloquear</button>
+            </form>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="app.js"></script>
+  </body>
+</html>

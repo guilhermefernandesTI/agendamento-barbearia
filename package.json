@@ -1,0 +1,20 @@
+{
+  "name": "agendamentobarbearia",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "tsc --noEmit",
+    "start": "node server.js",
+    "db:generate": "drizzle-kit generate --name create_agenda_tables"
+  },
+  "dependencies": {
+    "@netlify/database": "^1.1.0",
+    "@netlify/functions": "^3.0.0",
+    "drizzle-orm": "beta"
+  },
+  "devDependencies": {
+    "drizzle-kit": "beta",
+    "typescript": "^5.7.0"
+  }
+}
