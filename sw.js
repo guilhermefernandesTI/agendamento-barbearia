@@ -1,11 +1,10 @@
-const cacheName = "agenda-barbearia-v10";
+const cacheName = "agenda-barbearia-v11";
+
 const assets = [
   "./",
   "./index.html",
-  "./central.html",
   "./styles.css",
   "./app.js",
-  "./central.js",
   "./manifest.webmanifest",
   "./assets/barbershop-bg.svg",
   "./icons/icon-192.svg",
