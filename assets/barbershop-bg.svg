@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000" role="img" aria-label="Interior de barbearia estilizado">
+  <rect width="1600" height="1000" fill="#151515"/>
+  <rect x="0" y="660" width="1600" height="340" fill="#201f1d"/>
+  <rect x="120" y="130" width="520" height="360" rx="12" fill="#22211f" stroke="#4b463f" stroke-width="8"/>
+  <rect x="150" y="160" width="460" height="300" rx="8" fill="#5c574f"/>
+  <path d="M190 440L570 180" stroke="#86765a" stroke-width="14" opacity=".55"/>
+  <path d="M235 455L600 210" stroke="#2b2926" stroke-width="24" opacity=".45"/>
+  <rect x="810" y="190" width="380" height="470" rx="22" fill="#1b1a18" stroke="#37332d" stroke-width="8"/>
+  <rect x="872" y="250" width="256" height="170" rx="18" fill="#2c2924"/>
+  <path d="M918 420h164l34 182H884l34-182z" fill="#2a2723"/>
+  <rect x="855" y="610" width="290" height="55" rx="14" fill="#d7a847"/>
+  <rect x="1230" y="250" width="110" height="440" rx="55" fill="#f6f1e7"/>
+  <path d="M1230 260c55 38 55 78 0 116s-55 78 0 116 55 78 0 116" fill="none" stroke="#c23b3b" stroke-width="54"/>
+  <path d="M1340 260c-55 38-55 78 0 116s55 78 0 116-55 78 0 116" fill="none" stroke="#2f6bb3" stroke-width="54"/>
+  <rect x="1220" y="235" width="130" height="28" rx="14" fill="#b8afa1"/>
+  <rect x="1220" y="676" width="130" height="28" rx="14" fill="#b8afa1"/>
+  <rect x="210" y="720" width="1180" height="74" rx="10" fill="#302d28"/>
+  <rect x="280" y="790" width="110" height="130" rx="10" fill="#23211e"/>
+  <rect x="1210" y="790" width="110" height="130" rx="10" fill="#23211e"/>
+  <circle cx="510" cy="300" r="55" fill="#d7a847" opacity=".35"/>
+  <circle cx="1000" cy="335" r="72" fill="#d7a847" opacity=".18"/>
+</svg>
