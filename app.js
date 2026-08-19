@@ -2,6 +2,7 @@ const storageKey = "agenda-barbearia-state-v2";
 const authKey = "agenda-barbearia-admin-auth";
 const authRoleKey = "agenda-barbearia-auth-role";
 const loggedBarberKey = "agenda-barbearia-logged-barber";
+const authTokenKey = "agenda-barbearia-auth-token";
 
 const defaultState = {
   services: [],
@@ -314,7 +315,10 @@ async function sendRemoteAction(action, payload) {
   try {
     response = await fetch("/api/agenda", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...(sessionStorage.getItem(authTokenKey) ? { Authorization: `Bearer ${sessionStorage.getItem(authTokenKey)}` } : {}),
+      },
       body: JSON.stringify({ action, payload }),
     });
   } catch {
@@ -1223,6 +1227,7 @@ els.loginForm.addEventListener("submit", async (event) => {
         throw makeApiError(data?.error || "Nome de usuário ou senha incorretos.", response.status, response.status === 404);
       }
       barber = data.barber;
+        sessionStorage.setItem(authTokenKey, data.token || "");
     } catch (error) {
       if (error?.fallbackEligible === false && error?.status !== 401) {
         throw error;
@@ -1256,6 +1261,7 @@ els.logoutButton.addEventListener("click", () => {
   sessionStorage.removeItem(authKey);
   sessionStorage.removeItem(authRoleKey);
   sessionStorage.removeItem(loggedBarberKey);
+  sessionStorage.removeItem(authTokenKey);
   showToast("Você saiu da área restrita.");
   renderAll();
   showView("booking");

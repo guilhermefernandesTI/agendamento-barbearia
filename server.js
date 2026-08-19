@@ -1,4 +1,5 @@
 import http from "http";
+import { createHmac, timingSafeEqual } from "crypto";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -14,6 +15,7 @@ const host = process.env.HOST || "127.0.0.1";
 const dbDir = path.join(root, "db");
 const dbFile = path.join(dbDir, "local-state.json");
 const adminPassword = process.env.ADMIN_PASSWORD || "920025";
+const sessionSecret = process.env.SESSION_SECRET || adminPassword;
 
 const types = {
   ".html": "text/html; charset=utf-8",
@@ -123,6 +125,25 @@ function publicState(data) {
   return state;
 }
 
+function createSession(user) {
+  const payload = Buffer.from(JSON.stringify({ id: user.id, role: user.role, exp: Date.now() + 86400000 })).toString("base64url");
+  const signature = createHmac("sha256", sessionSecret).update(payload).digest("base64url");
+  return `${payload}.${signature}`;
+}
+
+function hasValidSession(request) {
+  const token = String(request.headers.authorization || "").replace(/^Bearer\s+/i, "");
+  const [payload, signature] = token.split(".");
+  if (!payload || !signature) return false;
+  const expected = createHmac("sha256", sessionSecret).update(payload).digest("base64url");
+  if (signature.length !== expected.length || !timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) return false;
+  try {
+    return JSON.parse(Buffer.from(payload, "base64url").toString()).exp > Date.now();
+  } catch {
+    return false;
+  }
+}
+
 function applyAction(database, action, payload = {}) {
   const collection = (name) => getCollection(database, name);
 
@@ -222,7 +243,7 @@ async function handleApi(request, response, url) {
     const appointments = getCollection(database, "appointments");
 
     if (request.method === "GET") {
-      sendJson(response, 200, appointments);
+      sendJson(response, 200, { state: publicState(database) });
       return true;
     }
 
@@ -236,7 +257,8 @@ async function handleApi(request, response, url) {
         if ((username === "admin" || username === "administrador") && password === adminPassword) {
           sendJson(response, 200, {
             ok: true,
-            barber: { id: "admin", name: "Administrador", username: "admin", role: "admin" }
+            barber: { id: "admin", name: "Administrador", username: "admin", role: "admin" },
+            token: createSession({ id: "admin", role: "admin" })
           });
           return true;
         }
@@ -260,12 +282,17 @@ async function handleApi(request, response, url) {
             name: barber.name,
             username: barber.username || barber.name,
             role: "barber"
-          }
+          },
+          token: createSession({ id: barber.id, role: "barber" })
         });
         return true;
       }
 
       try {
+        if (body.action !== "createAppointment" && !hasValidSession(request)) {
+          sendJson(response, 401, { ok: false, error: "Acesso restrito. Faça login novamente." });
+          return true;
+        }
         applyAction(database, body.action, body.payload);
         await writeDatabase(database);
         sendJson(response, 200, { ok: true, state: publicState(database) });
@@ -274,6 +301,11 @@ async function handleApi(request, response, url) {
       }
       return true;
     }
+  }
+
+  if (request.method === "POST" && !hasValidSession(request)) {
+    sendJson(response, 401, { ok: false, error: "Acesso restrito. Faça login novamente." });
+    return true;
   }
 
   /*
