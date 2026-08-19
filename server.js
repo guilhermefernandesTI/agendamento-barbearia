@@ -150,8 +150,9 @@ function publicState(data, slug = "principal") {
 }
 
 function centralState(data) {
+  const principal = getTenant(data, "principal");
   return {
-    tenants: Array.isArray(data.tenants) ? data.tenants : [],
+    tenants: Array.isArray(data.tenants) && data.tenants.length ? data.tenants : [principal],
     barbers: getCollection(data, "barbers").map(({ password, ...barber }) => barber),
   };
 }
