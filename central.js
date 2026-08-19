@@ -299,13 +299,16 @@ els.barbersList.addEventListener("click", async (event) => {
   const barber = (centralData.barbers || []).find((b) => b.id === barberId);
   if (!barber) return;
 
+  const tenant = (centralData.tenants || []).find((t) => t.id === barber.tenantId);
+  const tenantSlug = tenant ? tenant.slug : "principal";
+
   const confirmed = window.confirm(`Remover o barbeiro "${barber.name}"?`);
   if (!confirmed) return;
 
   try {
     centralData = await centralRequest("/api/central", {
       method: "POST",
-      body: JSON.stringify({ action: "removeBarber", payload: { id: barberId } }),
+      body: JSON.stringify({ action: "removeBarber", payload: { id: barberId, tenantSlug } }),
     });
     renderTenants();
     renderBarbers();
