@@ -8,8 +8,6 @@ const tenantSlug = (() => {
   return firstPath && !firstPath.includes(".") ? firstPath : "principal";
 })();
 
-let centralData = { tenants: [], barbers: [] };
-
 const defaultState = {
   services: [],
   barbers: [],
@@ -166,11 +164,6 @@ const els = {
   newBarberUsername: document.querySelector("#newBarberUsername"),
   newBarberPassword: document.querySelector("#newBarberPassword"),
   barbersList: document.querySelector("#barbersList"),
-  tenantForm: document.querySelector("#tenantForm"),
-  newTenantName: document.querySelector("#newTenantName"),
-  newTenantSlug: document.querySelector("#newTenantSlug"),
-  tenantsList: document.querySelector("#tenantsList"),
-  adminTenantSelect: document.querySelector("#adminTenantSelect"),
   blockForm: document.querySelector("#blockForm"),
   blockDate: document.querySelector("#blockDate"),
   blockBarber: document.querySelector("#blockBarber"),
@@ -633,37 +626,6 @@ async function syncState() {
   } catch (err) {
     console.warn("Erro ao sincronizar com banco de dados:", err);
   }
-}
-
-async function syncCentral() {
-  if (!isAdminRole()) return;
-  try {
-    const response = await fetch("/api/central", {
-      headers: { Authorization: `Bearer ${sessionStorage.getItem(authTokenKey) || ""}` },
-    });
-    if (response.ok) {
-      centralData = await response.json();
-      renderCentral();
-    }
-  } catch (error) {
-    console.warn("Erro ao sincronizar central:", error);
-  }
-}
-
-async function sendCentralAction(action, payload) {
-  const response = await fetch("/api/central", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${sessionStorage.getItem(authTokenKey) || ""}`,
-    },
-    body: JSON.stringify({ action, payload }),
-  });
-  const data = await readJsonResponse(response);
-  if (!response.ok || !data.ok) throw makeApiError(data?.error || "Não foi possível atualizar a central.", response.status);
-  centralData = data;
-  renderCentral();
-  return data;
 }
 
 async function persistChange(action, payload) {
@@ -1223,19 +1185,7 @@ function renderAll() {
   renderReports();
   renderFinancial();
   renderAdminLists();
-  renderCentral();
   renderSummary();
-}
-
-function renderCentral() {
-  if (!els.tenantsList || !els.adminTenantSelect) return;
-  const tenants = centralData.tenants || [];
-  els.adminTenantSelect.innerHTML = tenants.length
-    ? tenants.map((tenant) => `<option value="${escapeHtml(tenant.slug)}">${escapeHtml(tenant.name)} (${escapeHtml(tenant.slug)})</option>`).join("")
-    : `<option value="principal">Barbearia Principal</option>`;
-  els.tenantsList.innerHTML = tenants.length
-    ? tenants.map((tenant) => `<div class="table-row"><div class="table-row-info"><strong>${escapeHtml(tenant.name)}</strong><small>Link: /${escapeHtml(tenant.slug)}</small></div><div class="table-row-action"><button class="ghost-button" type="button" data-copy-tenant="${escapeHtml(tenant.slug)}">Copiar link</button></div></div>`).join("")
-    : `<div class="empty-state">Nenhuma barbearia cadastrada.</div>`;
 }
 
 function setInitialDates() {
@@ -1311,7 +1261,6 @@ els.loginForm.addEventListener("submit", async (event) => {
     renderAll();
     showView(authRole === "admin" ? "admin" : "schedule");
     await syncState();
-    await syncCentral();
   } catch (err) {
     showToast(err?.message || "Erro ao realizar login. Tente novamente.");
   }
@@ -1605,40 +1554,12 @@ els.barberForm.addEventListener("submit", async (event) => {
   };
 
   try {
-    if (isAdminRole() && els.adminTenantSelect?.value) {
-      await sendCentralAction("addBarber", { ...barber, tenantSlug: els.adminTenantSelect.value });
-    } else {
-      await persistChange("addBarber", barber);
-    }
+    await persistChange("addBarber", barber);
     els.barberForm.reset();
     showToast(`Login do barbeiro ${name} criado com sucesso!`);
   } catch (error) {
     // Handled in persistChange
   }
-});
-
-els.tenantForm?.addEventListener("submit", async (event) => {
-  event.preventDefault();
-  const name = els.newTenantName.value.trim();
-  const slug = els.newTenantSlug.value.trim().toLowerCase();
-  if (!name || !/^[a-z0-9-]+$/.test(slug)) {
-    showToast("Use um nome e um link com letras minúsculas, números e hífens.");
-    return;
-  }
-  try {
-    await sendCentralAction("createTenant", { name, slug });
-    els.tenantForm.reset();
-    showToast("Barbearia criada. O link já está disponível na lista.");
-  } catch (error) {
-    showToast(error?.message || "Não foi possível criar a barbearia.");
-  }
-});
-
-els.tenantsList?.addEventListener("click", async (event) => {
-  const slug = event.target.dataset.copyTenant;
-  if (!slug) return;
-  await navigator.clipboard.writeText(`${window.location.origin}/${slug}`);
-  showToast("Link copiado.");
 });
 
 els.blockForm.addEventListener("submit", async (event) => {
@@ -1744,5 +1665,4 @@ if ("serviceWorker" in navigator) {
 setInitialDates();
 renderAll();
 syncState();
-syncCentral();
 setInterval(syncState, 15000);

@@ -1,7 +1,5 @@
 const centralAuthKey = "agenda-barbearia-central-auth";
 const centralTokenKey = "agenda-barbearia-central-token";
-const centralRoleKey = "agenda-barbearia-central-role";
-const centralTenantSlugKey = "agenda-barbearia-central-tenant-slug";
 
 const els = {
   loginForm: document.querySelector("#centralLoginForm"),
@@ -17,10 +15,8 @@ const els = {
   toast: document.querySelector("#toast"),
 };
 
-let centralData = { tenants: [], barbers: [] };
+let centralData = { tenants: [] };
 let isCentralAuthenticated = sessionStorage.getItem(centralAuthKey) === "true";
-let centralRole = sessionStorage.getItem(centralRoleKey) || null;
-let centralTenantSlug = sessionStorage.getItem(centralTenantSlugKey) || null;
 
 function showToast(message) {
   els.toast.textContent = message;
@@ -39,10 +35,6 @@ function escapeHtml(value) {
     };
     return map[char];
   });
-}
-
-function tenantLabel(tenant) {
-  return `${tenant.name} (${tenant.slug})`;
 }
 
 async function readJsonResponse(response) {
@@ -82,21 +74,8 @@ async function syncCentral() {
   }
 }
 
-function getBarbersOfTenant(tenant) {
-  const tenants = centralData.tenants || [];
-  const tenantObj = typeof tenant === "string"
-    ? tenants.find((t) => t.slug === tenant)
-    : tenant;
-  const tenantId = tenantObj ? tenantObj.id : null;
-
-  return (centralData.barbers || []).filter((barber) => {
-    return !barber.tenantId || barber.tenantId === tenantId;
-  });
-}
-
 function renderTenants() {
   const tenants = centralData.tenants || [];
-  const isPrincipalAdmin = !centralTenantSlug;
 
   if (!tenants.length) {
     els.tenantsList.innerHTML = `<div class="empty-state">Nenhuma barbearia cadastrada.</div>`;
@@ -106,62 +85,20 @@ function renderTenants() {
   const tenantCards = tenants
     .map((tenant) => {
       const isPrincipal = tenant.slug === "principal";
-      const barbers = getBarbersOfTenant(tenant);
-
-      const barberRows = barbers.length
-        ? barbers
-            .map(
-              (barber) => `
-              <div class="central-barber-row">
-                <div class="central-barber-info">
-                  <strong>${escapeHtml(barber.name)}</strong>
-                  <span>Usuário: <code>${escapeHtml(barber.username || barber.name.toLowerCase())}</code></span>
-                  <span>Senha: <code>${escapeHtml(barber.password || "123")}</code></span>
-                </div>
-                <button class="danger-button" type="button" data-remove-barber="${escapeHtml(barber.id)}" data-tenant="${escapeHtml(tenant.slug)}">Remover</button>
-              </div>
-            `,
-            )
-            .join("")
-        : `<div class="empty-state central-empty">Nenhum barbeiro cadastrado nesta barbearia.</div>`;
+      const link = `${window.location.origin}/${tenant.slug}`;
 
       return `
         <article class="central-tenant-card">
           <div class="central-tenant-header">
             <div>
               <h4>${escapeHtml(tenant.name)} ${isPrincipal ? "⭐" : ""}</h4>
-              <small>Link: <code>/${escapeHtml(tenant.slug)}</code> | Barbeiros: ${barbers.length}</small>
+              <small>Link: <code>/${escapeHtml(tenant.slug)}</code></small>
             </div>
             <div class="table-row-action">
               <button class="ghost-button" type="button" data-copy-tenant="${escapeHtml(tenant.slug)}">Copiar link</button>
-              ${isPrincipalAdmin && !isPrincipal ? `<button class="danger-button" type="button" data-delete-tenant="${escapeHtml(tenant.slug)}">Apagar barbearia</button>` : ""}
+              <a class="ghost-button" href="${escapeHtml(link)}" target="_blank">Abrir</a>
+              ${isPrincipal ? "" : `<button class="danger-button" type="button" data-delete-tenant="${escapeHtml(tenant.slug)}">Apagar</button>`}
             </div>
-          </div>
-
-          <form class="central-barber-form" data-tenant-form="${escapeHtml(tenant.slug)}">
-            <div class="inline-fields">
-              <label>
-                Nome do barbeiro
-                <input required placeholder="Ex: Matheus" data-barber-name />
-              </label>
-              <label>
-                Usuário (Login)
-                <input required placeholder="Ex: matheus" data-barber-username />
-              </label>
-            </div>
-            <div class="inline-fields">
-              <label>
-                Senha de Acesso
-                <input required placeholder="Ex: 1234" data-barber-password />
-              </label>
-              <div class="central-form-action">
-                <button type="submit" class="secondary-button">➕ Cadastrar Barbeiro</button>
-              </div>
-            </div>
-          </form>
-
-          <div class="central-barbers-list">
-            ${barberRows}
           </div>
         </article>
       `;
@@ -206,15 +143,12 @@ els.loginForm.addEventListener("submit", async (event) => {
     });
 
     if (data.barber?.role !== "admin") {
-      throw new Error("Apenas administradores podem acessar a central.");
+      throw new Error("Apenas o administrador principal pode acessar a central.");
     }
 
     sessionStorage.setItem(centralAuthKey, "true");
     sessionStorage.setItem(centralTokenKey, data.token || "");
-    sessionStorage.setItem(centralRoleKey, data.barber.role || "admin");
-    sessionStorage.setItem(centralTenantSlugKey, data.barber.tenantSlug || "");
-    centralRole = data.barber.role || "admin";
-    centralTenantSlug = data.barber.tenantSlug || null;
+    isCentralAuthenticated = true;
 
     els.username.value = "";
     els.password.value = "";
@@ -230,10 +164,6 @@ els.loginForm.addEventListener("submit", async (event) => {
 els.logoutBtn.addEventListener("click", () => {
   sessionStorage.removeItem(centralAuthKey);
   sessionStorage.removeItem(centralTokenKey);
-  sessionStorage.removeItem(centralRoleKey);
-  sessionStorage.removeItem(centralTenantSlugKey);
-  centralRole = null;
-  centralTenantSlug = null;
   isCentralAuthenticated = false;
   showToast("Você saiu da central.");
   showLogin();
@@ -266,8 +196,6 @@ els.tenantForm.addEventListener("submit", async (event) => {
 els.tenantsList.addEventListener("click", async (event) => {
   const copySlug = event.target.dataset.copyTenant;
   const deleteSlug = event.target.dataset.deleteTenant;
-  const removeBarberId = event.target.dataset.removeBarber;
-  const removeBarberTenant = event.target.dataset.tenant;
 
   if (copySlug) {
     await navigator.clipboard.writeText(`${window.location.origin}/${copySlug}`);
@@ -294,60 +222,6 @@ els.tenantsList.addEventListener("click", async (event) => {
     } catch (error) {
       showToast(error.message || "Não foi possível apagar a barbearia.");
     }
-    return;
-  }
-
-  if (removeBarberId) {
-    const barber = (centralData.barbers || []).find((b) => b.id === removeBarberId);
-    if (!barber) return;
-
-    const confirmed = window.confirm(`Remover o barbeiro "${barber.name}"?`);
-    if (!confirmed) return;
-
-    try {
-      centralData = await centralRequest("/api/central", {
-        method: "POST",
-        body: JSON.stringify({
-          action: "removeBarber",
-          payload: { id: removeBarberId, tenantSlug: removeBarberTenant || "principal" },
-        }),
-      });
-      renderTenants();
-      showToast("Barbeiro removido.");
-    } catch (error) {
-      showToast(error.message || "Não foi possível remover o barbeiro.");
-    }
-  }
-});
-
-els.tenantsList.addEventListener("submit", async (event) => {
-  const form = event.target.closest("[data-tenant-form]");
-  if (!form) return;
-  event.preventDefault();
-
-  const tenantSlug = form.dataset.tenantForm;
-  const name = form.querySelector("[data-barber-name]").value.trim();
-  const username = form.querySelector("[data-barber-username]").value.trim();
-  const password = form.querySelector("[data-barber-password]").value.trim();
-
-  if (!name || !username || !password) {
-    showToast("Preencha nome, usuário e senha do barbeiro.");
-    return;
-  }
-
-  try {
-    centralData = await centralRequest("/api/central", {
-      method: "POST",
-      body: JSON.stringify({
-        action: "addBarber",
-        payload: { name, username, password, tenantSlug },
-      }),
-    });
-    form.reset();
-    renderTenants();
-    showToast(`Login do barbeiro ${name} criado com sucesso!`);
-  } catch (error) {
-    showToast(error.message || "Não foi possível criar o login.");
   }
 });
 

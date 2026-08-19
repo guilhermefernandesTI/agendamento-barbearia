@@ -341,24 +341,10 @@
             </div>
           </div>
           <div class="admin-grid">
-            <form class="admin-box" id="tenantForm">
-              <h4>Central de Barbearias</h4>
-              <p style="margin: 4px 0 12px; font-size: 0.82rem; color: var(--muted);">Crie uma unidade e entregue o link gerado ao cliente.</p>
-              <label>
-                Nome da Barbearia
-                <input id="newTenantName" required placeholder="Ex: Barbearia do Joao" />
-              </label>
-              <label>
-                Identificador do Link
-                <input id="newTenantSlug" required placeholder="Ex: barbearia-do-joao" pattern="[a-z0-9-]+" />
-              </label>
-              <button type="submit" class="secondary-button">Criar Barbearia</button>
-              <div class="table-container" id="tenantsList"></div>
-            </form>
             <form class="admin-box" id="barberForm">
               <h4>🔑 Cadastrar Login de Barbeiro</h4>
               <p style="margin: 4px 0 12px; font-size: 0.82rem; color: var(--muted);">
-                Crie acessos para que cada barbeiro possa entrar na sua própria área restrita.
+                Crie acessos para que cada barbeiro entre na área restrita desta barbearia.
               </p>
               <label>
                 Nome do Barbeiro
@@ -371,10 +357,6 @@
               <label>
                 Senha de Acesso
                 <input id="newBarberPassword" type="password" required placeholder="Ex: 1234" />
-              </label>
-              <label>
-                Barbearia
-                <select id="adminTenantSelect" required></select>
               </label>
               <button type="submit" class="secondary-button">Criar Login de Barbeiro</button>
 
