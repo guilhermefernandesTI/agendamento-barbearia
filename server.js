@@ -459,7 +459,8 @@ export async function handleRequest(request, response) {
     console.error(error);
 
     if (!response.headersSent) {
-      sendJson(response, 500, {
+      const missingDatabase = error.message.includes("DATABASE_URL");
+      sendJson(response, missingDatabase ? 503 : 500, {
         error: "Internal server error",
         message: error.message
       });
