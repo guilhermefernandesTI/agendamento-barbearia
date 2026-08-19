@@ -30,6 +30,8 @@ const types = {
 };
 
 function ensureDatabase() {
+  if (process.env.VERCEL) return;
+
   if (!fs.existsSync(dbDir)) {
     fs.mkdirSync(dbDir, { recursive: true });
   }
@@ -48,6 +50,10 @@ async function readDatabase() {
     return (await getState()) || {};
   }
 
+  if (process.env.VERCEL) {
+    throw new Error("Banco de dados não configurado na Vercel. Defina DATABASE_URL.");
+  }
+
   ensureDatabase();
 
   try {
@@ -63,6 +69,10 @@ async function writeDatabase(data) {
   if (process.env.DATABASE_URL) {
     await saveState(data);
     return;
+  }
+
+  if (process.env.VERCEL) {
+    throw new Error("Banco de dados não configurado na Vercel. Defina DATABASE_URL.");
   }
 
   ensureDatabase();
@@ -457,7 +467,7 @@ export async function handleRequest(request, response) {
   }
 }
 
-ensureDatabase();
+if (!process.env.VERCEL) ensureDatabase();
 await initializeDatabase();
 
 if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
