@@ -1,4 +1,4 @@
-const cacheName = "agenda-barbearia-v8";
+const cacheName = "agenda-barbearia-v9";
 const assets = [
   "./",
   "./index.html",
