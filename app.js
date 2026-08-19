@@ -1752,4 +1752,5 @@ if ("serviceWorker" in navigator) {
 setInitialDates();
 renderAll();
 syncState();
+syncCentral();
 setInterval(syncState, 15000);
