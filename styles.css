@@ -155,28 +155,19 @@ body:not(.admin-auth) .hero-section {
   gap: 8px;
 }
 
-.today-panel {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  justify-content: center;
+.back-link {
+  display: inline-flex;
   align-items: center;
-  border: 1px solid rgba(215, 168, 71, 0.34);
-  border-radius: 8px;
-  background: rgba(18, 18, 18, 0.58);
-  text-align: center;
+  min-height: 40px;
+  padding: 0 14px;
+  text-decoration: none;
+  font-size: 0.88rem;
+  white-space: nowrap;
 }
 
-.today-panel span,
-.today-panel small {
-  color: var(--muted);
-}
-
-.today-panel strong {
-  margin: 8px 0;
+.back-link:hover {
+  border-color: var(--gold);
   color: var(--gold);
-  font-size: 4rem;
-  line-height: 1;
 }
 
 .tabs {
@@ -658,10 +649,6 @@ textarea:focus {
 
   .hero-section {
     padding: 20px;
-  }
-
-  .today-panel {
-    min-height: 116px;
   }
 
   .section-heading {

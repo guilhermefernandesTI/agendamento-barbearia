@@ -153,7 +153,7 @@ function centralState(data) {
   const principal = getTenant(data, "principal");
   return {
     tenants: Array.isArray(data.tenants) && data.tenants.length ? data.tenants : [principal],
-    barbers: getCollection(data, "barbers").map(({ password, ...barber }) => barber),
+    barbers: getCollection(data, "barbers"),
   };
 }
 
@@ -263,6 +263,27 @@ function applyAction(database, action, payload = {}, tenantSlug = "principal") {
     if (!name || !slug) throw new Error("Informe o nome e o identificador da barbearia.");
     if (collection("tenants").some((item) => item.slug === slug)) throw new Error("Esse link já está em uso.");
     collection("tenants").push({ id: crypto.randomUUID(), slug, name });
+    return;
+  }
+
+  if (action === "removeTenant") {
+    const slug = String(payload.slug || "").trim();
+    const target = collection("tenants").find((item) => item.slug === slug);
+    if (!target) throw new Error("Barbearia não encontrada.");
+    if (slug === "principal" || target.id === "principal") throw new Error("A barbearia principal não pode ser removida.");
+    if (collection("tenants").length <= 1) throw new Error("Mantenha pelo menos uma barbearia.");
+    database.tenants = collection("tenants").filter((item) => item.slug !== slug);
+
+    const tenantId = target.id;
+    const removeScoped = (name) => {
+      database[name] = collection(name).filter((item) => item.tenantId !== tenantId);
+    };
+    removeScoped("services");
+    removeScoped("barbers");
+    removeScoped("appointments");
+    removeScoped("blocks");
+    removeScoped("products");
+    removeScoped("sales");
     return;
   }
 

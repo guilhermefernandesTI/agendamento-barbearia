@@ -141,7 +141,6 @@ const els = {
   adminPassword: document.querySelector("#adminPassword"),
   installButton: document.querySelector("#installButton"),
   openStatus: document.querySelector("#openStatus"),
-  todayCount: document.querySelector("#todayCount"),
   sundayNotice: document.querySelector("#sundayNotice"),
   bookingForm: document.querySelector("#bookingForm"),
   clientName: document.querySelector("#clientName"),
@@ -1199,13 +1198,6 @@ function renderAdminLists() {
 }
 
 function renderSummary() {
-  const today = todayIso();
-  const barberId = getCurrentBarberId();
-  const count = state.appointments.filter(
-    (item) => item.date === today && item.status !== "cancelado" && (!barberId || item.barberId === barberId),
-  ).length;
-  if (els.todayCount) els.todayCount.textContent = count;
-
   const now = new Date();
   const dayOfWeek = now.getDay();
   const hour = now.getHours();
