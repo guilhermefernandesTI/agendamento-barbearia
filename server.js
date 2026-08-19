@@ -149,16 +149,28 @@ function publicState(data, slug = "principal") {
   return state;
 }
 
-function centralState(data) {
+function centralState(data, tenantSlug = null) {
   const principal = getTenant(data, "principal");
+  const tenants = Array.isArray(data.tenants) && data.tenants.length ? data.tenants : [principal];
+
+  if (tenantSlug) {
+    const tenant = getTenant(data, tenantSlug);
+    if (!tenant) return null;
+    const tenantId = tenant.id;
+    return {
+      tenants: [tenant],
+      barbers: getCollection(data, "barbers").filter((barber) => !barber.tenantId || barber.tenantId === tenantId),
+    };
+  }
+
   return {
-    tenants: Array.isArray(data.tenants) && data.tenants.length ? data.tenants : [principal],
+    tenants,
     barbers: getCollection(data, "barbers"),
   };
 }
 
 function createSession(user) {
-  const payload = Buffer.from(JSON.stringify({ id: user.id, role: user.role, exp: Date.now() + 86400000 })).toString("base64url");
+  const payload = Buffer.from(JSON.stringify({ id: user.id, role: user.role, tenantSlug: user.tenantSlug || null, exp: Date.now() + 86400000 })).toString("base64url");
   const signature = createHmac("sha256", sessionSecret).update(payload).digest("base64url");
   return `${payload}.${signature}`;
 }
@@ -352,15 +364,19 @@ async function handleApi(request, response, url) {
           return true;
         }
 
+        const barberRole = barber.role === "admin" ? "admin" : "barber";
+        const barberTenantSlug = tenant.slug;
+
         sendJson(response, 200, {
           ok: true,
           barber: {
             id: barber.id,
             name: barber.name,
             username: barber.username || barber.name,
-            role: "barber"
+            role: barberRole,
+            tenantSlug: barberTenantSlug
           },
-          token: createSession({ id: barber.id, role: "barber" })
+          token: createSession({ id: barber.id, role: barberRole, tenantSlug: barberTenantSlug })
         });
         return true;
       }
@@ -381,20 +397,32 @@ async function handleApi(request, response, url) {
   }
 
   if (url.pathname === "/api/central") {
-    if (getSessionUser(request)?.role !== "admin") {
+    const sessionUser = getSessionUser(request);
+    if (sessionUser?.role !== "admin") {
       sendJson(response, 401, { ok: false, error: "Acesso restrito." });
       return true;
     }
+    const sessionTenantSlug = sessionUser.tenantSlug || null;
     if (request.method === "GET") {
-      sendJson(response, 200, centralState(database));
+      const state = centralState(database, sessionTenantSlug);
+      if (!state) {
+        sendJson(response, 404, { ok: false, error: "Barbearia não encontrada." });
+        return true;
+      }
+      sendJson(response, 200, state);
       return true;
     }
     if (request.method === "POST") {
       const body = await getBody(request);
       try {
-        applyAction(database, body.action, body.payload, body.payload?.tenantSlug || "principal");
+        const targetSlug = body.payload?.tenantSlug || sessionTenantSlug || "principal";
+        if (sessionTenantSlug && targetSlug !== sessionTenantSlug) {
+          throw new Error("Você só pode gerenciar a sua própria barbearia.");
+        }
+        applyAction(database, body.action, body.payload, targetSlug);
         await writeDatabase(database);
-        sendJson(response, 200, { ok: true, ...centralState(database) });
+        const state = centralState(database, sessionTenantSlug);
+        sendJson(response, 200, { ok: true, ...state });
       } catch (error) {
         sendJson(response, 400, { ok: false, error: error.message });
       }

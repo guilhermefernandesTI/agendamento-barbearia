@@ -1,5 +1,7 @@
 const centralAuthKey = "agenda-barbearia-central-auth";
 const centralTokenKey = "agenda-barbearia-central-token";
+const centralRoleKey = "agenda-barbearia-central-role";
+const centralTenantSlugKey = "agenda-barbearia-central-tenant-slug";
 
 const els = {
   loginForm: document.querySelector("#centralLoginForm"),
@@ -17,6 +19,8 @@ const els = {
 
 let centralData = { tenants: [], barbers: [] };
 let isCentralAuthenticated = sessionStorage.getItem(centralAuthKey) === "true";
+let centralRole = sessionStorage.getItem(centralRoleKey) || null;
+let centralTenantSlug = sessionStorage.getItem(centralTenantSlugKey) || null;
 
 function showToast(message) {
   els.toast.textContent = message;
@@ -92,6 +96,7 @@ function getBarbersOfTenant(tenant) {
 
 function renderTenants() {
   const tenants = centralData.tenants || [];
+  const isPrincipalAdmin = !centralTenantSlug;
 
   if (!tenants.length) {
     els.tenantsList.innerHTML = `<div class="empty-state">Nenhuma barbearia cadastrada.</div>`;
@@ -129,7 +134,7 @@ function renderTenants() {
             </div>
             <div class="table-row-action">
               <button class="ghost-button" type="button" data-copy-tenant="${escapeHtml(tenant.slug)}">Copiar link</button>
-              ${isPrincipal ? "" : `<button class="danger-button" type="button" data-delete-tenant="${escapeHtml(tenant.slug)}">Apagar barbearia</button>`}
+              ${isPrincipalAdmin && !isPrincipal ? `<button class="danger-button" type="button" data-delete-tenant="${escapeHtml(tenant.slug)}">Apagar barbearia</button>` : ""}
             </div>
           </div>
 
@@ -201,12 +206,15 @@ els.loginForm.addEventListener("submit", async (event) => {
     });
 
     if (data.barber?.role !== "admin") {
-      throw new Error("Apenas o administrador principal pode acessar a central.");
+      throw new Error("Apenas administradores podem acessar a central.");
     }
 
     sessionStorage.setItem(centralAuthKey, "true");
     sessionStorage.setItem(centralTokenKey, data.token || "");
-    isCentralAuthenticated = true;
+    sessionStorage.setItem(centralRoleKey, data.barber.role || "admin");
+    sessionStorage.setItem(centralTenantSlugKey, data.barber.tenantSlug || "");
+    centralRole = data.barber.role || "admin";
+    centralTenantSlug = data.barber.tenantSlug || null;
 
     els.username.value = "";
     els.password.value = "";
@@ -222,6 +230,10 @@ els.loginForm.addEventListener("submit", async (event) => {
 els.logoutBtn.addEventListener("click", () => {
   sessionStorage.removeItem(centralAuthKey);
   sessionStorage.removeItem(centralTokenKey);
+  sessionStorage.removeItem(centralRoleKey);
+  sessionStorage.removeItem(centralTenantSlugKey);
+  centralRole = null;
+  centralTenantSlug = null;
   isCentralAuthenticated = false;
   showToast("Você saiu da central.");
   showLogin();
