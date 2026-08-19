@@ -282,7 +282,7 @@ const database = await readDatabase();
   return true;
 }
 
-const server = http.createServer(async (request, response) => {
+export async function handleRequest(request, response) {
   try {
     const url = new URL(
       request.url,
@@ -341,13 +341,17 @@ const server = http.createServer(async (request, response) => {
       });
     }
   }
-});
+}
 
 ensureDatabase();
 await initializeDatabase();
 
-server.listen(port, host, () => {
-  console.log(
-    `Agenda Barbearia aberta em http://${host}:${port}`
-  );
-});
+if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
+  const server = http.createServer(handleRequest);
+
+  server.listen(port, host, () => {
+    console.log(
+      `Agenda Barbearia aberta em http://${host}:${port}`
+    );
+  });
+}
