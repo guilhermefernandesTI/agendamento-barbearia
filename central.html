@@ -29,7 +29,7 @@
           <div class="hero-copy">
             <p class="status-pill">Painel central</p>
             <h2>Gerencie todas as barbearias em um só lugar.</h2>
-            <p>Crie unidades, copie links, remova barbearias e acompanhe os logins de cada barbeiro.</p>
+            <p>Crie unidades, cadastre barbeiros, copie links e acompanhe os logins de cada equipe.</p>
           </div>
         </section>
 
@@ -67,7 +67,7 @@
 
           <div class="admin-grid" style="margin-top: 18px;">
             <form class="admin-box" id="centralTenantForm">
-              <h4>➕ Criar Barbearia</h4>
+              <h4>➕ Cadastrar Barbearia</h4>
               <p style="margin: 4px 0 12px; font-size: 0.82rem; color: var(--muted);">Crie uma unidade e entregue o link gerado ao cliente.</p>
               <label>
                 Nome da Barbearia
@@ -80,38 +80,9 @@
               <button type="submit" class="secondary-button">Criar Barbearia</button>
             </form>
 
-            <form class="admin-box" id="centralBarberForm">
-              <h4>🔑 Cadastrar Login de Barbeiro</h4>
-              <p style="margin: 4px 0 12px; font-size: 0.82rem; color: var(--muted);">
-                Crie acessos para que cada barbeiro entre na área restrita da sua barbearia.
-              </p>
-              <label>
-                Barbearia
-                <select id="centralTenantSelect" required></select>
-              </label>
-              <label>
-                Nome do Barbeiro
-                <input id="centralBarberName" required placeholder="Ex: Matheus" />
-              </label>
-              <label>
-                Usuário (Login)
-                <input id="centralBarberUsername" required placeholder="Ex: matheus" />
-              </label>
-              <label>
-                Senha de Acesso
-                <input id="centralBarberPassword" required placeholder="Ex: 1234" />
-              </label>
-              <button type="submit" class="secondary-button">Criar Login de Barbeiro</button>
-            </form>
-
             <div class="admin-box" style="grid-column: span 2;">
               <h4>🏪 Barbearias Cadastradas</h4>
-              <div class="table-container" id="centralTenantsList"></div>
-            </div>
-
-            <div class="admin-box" style="grid-column: span 2;">
-              <h4>👤 Logins dos Barbeiros</h4>
-              <div class="table-container" id="centralBarbersList"></div>
+              <div class="central-list" id="centralTenantsList"></div>
             </div>
           </div>
         </section>

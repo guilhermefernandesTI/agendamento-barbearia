@@ -611,6 +611,110 @@ textarea:focus {
   font-size: 0.9rem;
 }
 
+/* Central de Barbearias */
+.central-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.central-tenant-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.central-tenant-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel-2);
+}
+
+.central-tenant-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.central-tenant-header h4 {
+  margin: 0;
+  font-size: 1.05rem;
+  color: var(--text);
+}
+
+.central-tenant-header small {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.central-barber-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(18, 18, 18, 0.55);
+}
+
+.central-form-action {
+  display: flex;
+  align-items: flex-end;
+}
+
+.central-barbers-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.central-barber-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid rgba(215, 168, 71, 0.22);
+  border-radius: 8px;
+  background: rgba(215, 168, 71, 0.06);
+}
+
+.central-barber-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.central-barber-info strong {
+  color: var(--text);
+  font-size: 0.92rem;
+}
+
+.central-barber-info span {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.central-barber-info code {
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: #111;
+  color: var(--gold);
+  font-size: 0.78rem;
+}
+
+.central-empty {
+  min-height: 60px;
+  font-size: 0.82rem;
+}
+
 .toast {
   position: fixed;
   left: 50%;
@@ -639,7 +743,8 @@ textarea:focus {
   .hero-section,
   .booking-form,
   .admin-grid,
-  .kpi-grid {
+  .kpi-grid,
+  .central-tenant-grid {
     grid-template-columns: 1fr;
   }
 

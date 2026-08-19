@@ -11,13 +11,7 @@ const els = {
   tenantForm: document.querySelector("#centralTenantForm"),
   tenantName: document.querySelector("#centralTenantName"),
   tenantSlug: document.querySelector("#centralTenantSlug"),
-  tenantSelect: document.querySelector("#centralTenantSelect"),
-  barberForm: document.querySelector("#centralBarberForm"),
-  barberName: document.querySelector("#centralBarberName"),
-  barberUsername: document.querySelector("#centralBarberUsername"),
-  barberPassword: document.querySelector("#centralBarberPassword"),
   tenantsList: document.querySelector("#centralTenantsList"),
-  barbersList: document.querySelector("#centralBarbersList"),
   toast: document.querySelector("#toast"),
 };
 
@@ -79,72 +73,101 @@ async function syncCentral() {
   try {
     centralData = await centralRequest("/api/central");
     renderTenants();
-    renderBarbers();
   } catch (error) {
     showToast(error.message || "Erro ao carregar central.");
   }
 }
 
+function getBarbersOfTenant(tenant) {
+  const tenants = centralData.tenants || [];
+  const tenantObj = typeof tenant === "string"
+    ? tenants.find((t) => t.slug === tenant)
+    : tenant;
+  const tenantId = tenantObj ? tenantObj.id : null;
+
+  return (centralData.barbers || []).filter((barber) => {
+    return !barber.tenantId || barber.tenantId === tenantId;
+  });
+}
+
 function renderTenants() {
   const tenants = centralData.tenants || [];
 
-  els.tenantSelect.innerHTML = tenants.length
-    ? tenants.map((tenant) => `<option value="${escapeHtml(tenant.slug)}">${escapeHtml(tenantLabel(tenant))}</option>`).join("")
-    : `<option value="principal">Barbearia Principal</option>`;
-
-  els.tenantsList.innerHTML = tenants.length
-    ? tenants
-        .map((tenant) => {
-          const isPrincipal = tenant.slug === "principal";
-          const link = `${window.location.origin}/${tenant.slug}`;
-          const barberCount = (centralData.barbers || []).filter((barber) => {
-            const tenantId = tenants.find((t) => t.slug === tenant.slug)?.id;
-            return !barber.tenantId || barber.tenantId === tenantId;
-          }).length;
-
-          return `
-            <div class="table-row">
-              <div class="table-row-info">
-                <strong>${escapeHtml(tenant.name)} ${isPrincipal ? "⭐" : ""}</strong>
-                <small>Link: <code>/${escapeHtml(tenant.slug)}</code> | Barbeiros: ${barberCount}</small>
-              </div>
-              <div class="table-row-action">
-                <button class="ghost-button" type="button" data-copy-tenant="${escapeHtml(tenant.slug)}">Copiar link</button>
-                ${isPrincipal ? "" : `<button class="danger-button" type="button" data-delete-tenant="${escapeHtml(tenant.slug)}">Excluir</button>`}
-              </div>
-            </div>
-          `;
-        })
-        .join("")
-    : `<div class="empty-state">Nenhuma barbearia cadastrada.</div>`;
-}
-
-function renderBarbers() {
-  const barbers = centralData.barbers || [];
-  const tenants = centralData.tenants || [];
-
-  if (!barbers.length) {
-    els.barbersList.innerHTML = `<div class="empty-state">Nenhum barbeiro cadastrado.</div>`;
+  if (!tenants.length) {
+    els.tenantsList.innerHTML = `<div class="empty-state">Nenhuma barbearia cadastrada.</div>`;
     return;
   }
 
-  els.barbersList.innerHTML = barbers
-    .map((barber) => {
-      const tenant = tenants.find((t) => t.id === barber.tenantId);
-      const tenantName = tenant ? tenant.name : "Barbearia Principal";
+  const tenantCards = tenants
+    .map((tenant) => {
+      const isPrincipal = tenant.slug === "principal";
+      const barbers = getBarbersOfTenant(tenant);
+
+      const barberRows = barbers.length
+        ? barbers
+            .map(
+              (barber) => `
+              <div class="central-barber-row">
+                <div class="central-barber-info">
+                  <strong>${escapeHtml(barber.name)}</strong>
+                  <span>Usuário: <code>${escapeHtml(barber.username || barber.name.toLowerCase())}</code></span>
+                  <span>Senha: <code>${escapeHtml(barber.password || "123")}</code></span>
+                </div>
+                <button class="danger-button" type="button" data-remove-barber="${escapeHtml(barber.id)}" data-tenant="${escapeHtml(tenant.slug)}">Remover</button>
+              </div>
+            `,
+            )
+            .join("")
+        : `<div class="empty-state central-empty">Nenhum barbeiro cadastrado nesta barbearia.</div>`;
+
       return `
-        <div class="table-row">
-          <div class="table-row-info">
-            <strong>${escapeHtml(barber.name)}</strong>
-            <small>Barbearia: ${escapeHtml(tenantName)} | Usuário: <code>${escapeHtml(barber.username || barber.name.toLowerCase())}</code> | Senha: <code>${escapeHtml(barber.password || "123")}</code></small>
+        <article class="central-tenant-card">
+          <div class="central-tenant-header">
+            <div>
+              <h4>${escapeHtml(tenant.name)} ${isPrincipal ? "⭐" : ""}</h4>
+              <small>Link: <code>/${escapeHtml(tenant.slug)}</code> | Barbeiros: ${barbers.length}</small>
+            </div>
+            <div class="table-row-action">
+              <button class="ghost-button" type="button" data-copy-tenant="${escapeHtml(tenant.slug)}">Copiar link</button>
+              ${isPrincipal ? "" : `<button class="danger-button" type="button" data-delete-tenant="${escapeHtml(tenant.slug)}">Apagar barbearia</button>`}
+            </div>
           </div>
-          <div class="table-row-action">
-            <button class="ghost-button" type="button" data-remove-barber="${escapeHtml(barber.id)}">Remover</button>
+
+          <form class="central-barber-form" data-tenant-form="${escapeHtml(tenant.slug)}">
+            <div class="inline-fields">
+              <label>
+                Nome do barbeiro
+                <input required placeholder="Ex: Matheus" data-barber-name />
+              </label>
+              <label>
+                Usuário (Login)
+                <input required placeholder="Ex: matheus" data-barber-username />
+              </label>
+            </div>
+            <div class="inline-fields">
+              <label>
+                Senha de Acesso
+                <input required placeholder="Ex: 1234" data-barber-password />
+              </label>
+              <div class="central-form-action">
+                <button type="submit" class="secondary-button">➕ Cadastrar Barbeiro</button>
+              </div>
+            </div>
+          </form>
+
+          <div class="central-barbers-list">
+            ${barberRows}
           </div>
-        </div>
+        </article>
       `;
     })
     .join("");
+
+  els.tenantsList.innerHTML = `
+    <div class="central-tenant-grid">
+      ${tenantCards}
+    </div>
+  `;
 }
 
 function showCentral() {
@@ -222,46 +245,17 @@ els.tenantForm.addEventListener("submit", async (event) => {
     });
     els.tenantForm.reset();
     renderTenants();
-    renderBarbers();
     showToast("Barbearia criada. O link já está disponível na lista.");
   } catch (error) {
     showToast(error.message || "Não foi possível criar a barbearia.");
   }
 });
 
-els.barberForm.addEventListener("submit", async (event) => {
-  event.preventDefault();
-
-  const name = els.barberName.value.trim();
-  const username = els.barberUsername.value.trim();
-  const password = els.barberPassword.value.trim();
-  const tenantSlug = els.tenantSelect.value;
-
-  if (!name || !username || !password) {
-    showToast("Preencha nome, usuário e senha.");
-    return;
-  }
-
-  try {
-    centralData = await centralRequest("/api/central", {
-      method: "POST",
-      body: JSON.stringify({
-        action: "addBarber",
-        payload: { name, username, password, tenantSlug },
-      }),
-    });
-    els.barberForm.reset();
-    renderTenants();
-    renderBarbers();
-    showToast(`Login do barbeiro ${name} criado com sucesso!`);
-  } catch (error) {
-    showToast(error.message || "Não foi possível criar o login.");
-  }
-});
-
 els.tenantsList.addEventListener("click", async (event) => {
   const copySlug = event.target.dataset.copyTenant;
   const deleteSlug = event.target.dataset.deleteTenant;
+  const removeBarberId = event.target.dataset.removeBarber;
+  const removeBarberTenant = event.target.dataset.tenant;
 
   if (copySlug) {
     await navigator.clipboard.writeText(`${window.location.origin}/${copySlug}`);
@@ -274,7 +268,7 @@ els.tenantsList.addEventListener("click", async (event) => {
     if (!tenant) return;
 
     const confirmed = window.confirm(
-      `Tem certeza que deseja excluir a barbearia "${tenant.name}"?\n\nTodos os dados desta unidade (agendamentos, serviços, barbeiros, produtos, vendas) serão removidos permanentemente.`,
+      `Tem certeza que deseja apagar a barbearia "${tenant.name}"?\n\nTodos os dados desta unidade (agendamentos, serviços, barbeiros, produtos, vendas) serão removidos permanentemente.`,
     );
     if (!confirmed) return;
 
@@ -284,37 +278,64 @@ els.tenantsList.addEventListener("click", async (event) => {
         body: JSON.stringify({ action: "removeTenant", payload: { slug: deleteSlug } }),
       });
       renderTenants();
-      renderBarbers();
-      showToast("Barbearia excluída.");
+      showToast("Barbearia apagada.");
     } catch (error) {
-      showToast(error.message || "Não foi possível excluir a barbearia.");
+      showToast(error.message || "Não foi possível apagar a barbearia.");
+    }
+    return;
+  }
+
+  if (removeBarberId) {
+    const barber = (centralData.barbers || []).find((b) => b.id === removeBarberId);
+    if (!barber) return;
+
+    const confirmed = window.confirm(`Remover o barbeiro "${barber.name}"?`);
+    if (!confirmed) return;
+
+    try {
+      centralData = await centralRequest("/api/central", {
+        method: "POST",
+        body: JSON.stringify({
+          action: "removeBarber",
+          payload: { id: removeBarberId, tenantSlug: removeBarberTenant || "principal" },
+        }),
+      });
+      renderTenants();
+      showToast("Barbeiro removido.");
+    } catch (error) {
+      showToast(error.message || "Não foi possível remover o barbeiro.");
     }
   }
 });
 
-els.barbersList.addEventListener("click", async (event) => {
-  const barberId = event.target.dataset.removeBarber;
-  if (!barberId) return;
+els.tenantsList.addEventListener("submit", async (event) => {
+  const form = event.target.closest("[data-tenant-form]");
+  if (!form) return;
+  event.preventDefault();
 
-  const barber = (centralData.barbers || []).find((b) => b.id === barberId);
-  if (!barber) return;
+  const tenantSlug = form.dataset.tenantForm;
+  const name = form.querySelector("[data-barber-name]").value.trim();
+  const username = form.querySelector("[data-barber-username]").value.trim();
+  const password = form.querySelector("[data-barber-password]").value.trim();
 
-  const tenant = (centralData.tenants || []).find((t) => t.id === barber.tenantId);
-  const tenantSlug = tenant ? tenant.slug : "principal";
-
-  const confirmed = window.confirm(`Remover o barbeiro "${barber.name}"?`);
-  if (!confirmed) return;
+  if (!name || !username || !password) {
+    showToast("Preencha nome, usuário e senha do barbeiro.");
+    return;
+  }
 
   try {
     centralData = await centralRequest("/api/central", {
       method: "POST",
-      body: JSON.stringify({ action: "removeBarber", payload: { id: barberId, tenantSlug } }),
+      body: JSON.stringify({
+        action: "addBarber",
+        payload: { name, username, password, tenantSlug },
+      }),
     });
+    form.reset();
     renderTenants();
-    renderBarbers();
-    showToast("Barbeiro removido.");
+    showToast(`Login do barbeiro ${name} criado com sucesso!`);
   } catch (error) {
-    showToast(error.message || "Não foi possível remover o barbeiro.");
+    showToast(error.message || "Não foi possível criar o login.");
   }
 });
 
