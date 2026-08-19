@@ -607,11 +607,18 @@ async function syncState() {
 
 async function persistChange(action, payload) {
   try {
-    localApplyAction(action, payload);
+    const result = await sendRemoteAction(action, payload);
+    state = normalizeState(result.state);
     saveState();
     renderAll();
-    return { ok: true, state };
+    return result;
   } catch (error) {
+    if (error?.fallbackEligible) {
+      localApplyAction(action, payload);
+      saveState();
+      renderAll();
+      return { ok: true, state };
+    }
     showToast(error?.message || "Não foi possível salvar as alterações.");
     throw error;
   }

@@ -13,7 +13,7 @@ const host = process.env.HOST || "127.0.0.1";
 
 const dbDir = path.join(root, "db");
 const dbFile = path.join(dbDir, "local-state.json");
-const adminPassword = "920025";
+const adminPassword = process.env.ADMIN_PASSWORD || "920025";
 
 const types = {
   ".html": "text/html; charset=utf-8",
@@ -116,6 +116,90 @@ function getCollection(data, name) {
   return data[name];
 }
 
+function publicState(data) {
+  const state = { ...data };
+  state.barbers = getCollection(data, "barbers").map(({ password, ...barber }) => barber);
+  state.appointments = getCollection(data, "appointments").filter((item) => !item.action);
+  return state;
+}
+
+function applyAction(database, action, payload = {}) {
+  const collection = (name) => getCollection(database, name);
+
+  if (action === "createAppointment") {
+    collection("appointments").push({ id: payload.id || crypto.randomUUID(), ...payload });
+    return;
+  }
+
+  if (action === "updateAppointment") {
+    const appointment = collection("appointments").find((item) => item.id === payload.id);
+    if (!appointment) throw new Error("Agendamento não encontrado.");
+    appointment.status = payload.status;
+    return;
+  }
+
+  if (action === "addService") {
+    collection("services").push({ id: payload.id || crypto.randomUUID(), ...payload });
+    return;
+  }
+
+  if (action === "removeService") {
+    if (collection("services").length <= 1) throw new Error("Mantenha pelo menos um serviço cadastrado.");
+    database.services = collection("services").filter((item) => item.id !== payload.id);
+    return;
+  }
+
+  if (action === "addBarber") {
+    const username = String(payload.username || payload.name || "").trim();
+    if (!String(payload.name || "").trim() || !username) throw new Error("Informe nome e usuário do barbeiro.");
+    if (collection("barbers").some((item) => String(item.username || "").toLowerCase() === username.toLowerCase())) {
+      throw new Error("Já existe um barbeiro com esse nome de usuário.");
+    }
+    collection("barbers").push({ id: payload.id || crypto.randomUUID(), ...payload, username });
+    return;
+  }
+
+  if (action === "removeBarber") {
+    if (collection("barbers").length <= 1) throw new Error("Mantenha pelo menos um barbeiro cadastrado.");
+    database.barbers = collection("barbers").filter((item) => item.id !== payload.id);
+    return;
+  }
+
+  if (action === "addBlock") {
+    collection("blocks").push({ id: payload.id || crypto.randomUUID(), ...payload });
+    return;
+  }
+
+  if (action === "addProduct") {
+    collection("products").push({ id: payload.id || crypto.randomUUID(), ...payload });
+    return;
+  }
+
+  if (action === "removeProduct") {
+    database.products = collection("products").filter((item) => item.id !== payload.id);
+    return;
+  }
+
+  if (action === "addSale") {
+    if (!collection("sales").some((item) => item.id === payload.id)) collection("sales").push({ id: payload.id || crypto.randomUUID(), ...payload });
+    return;
+  }
+
+  if (action === "updateSale") {
+    const sale = collection("sales").find((item) => item.id === payload.id);
+    if (!sale) throw new Error("Lançamento não encontrado.");
+    Object.assign(sale, payload);
+    return;
+  }
+
+  if (action === "removeSale") {
+    database.sales = collection("sales").filter((item) => item.id !== payload.id);
+    return;
+  }
+
+  throw new Error("Ação não suportada.");
+}
+
 async function handleApi(request, response, url) {
   if (request.method === "OPTIONS") {
     response.writeHead(204, {
@@ -128,7 +212,7 @@ async function handleApi(request, response, url) {
     return true;
   }
 
-const database = await readDatabase();
+  const database = await readDatabase();
 
   /*
    * AGENDAMENTOS
@@ -181,15 +265,13 @@ const database = await readDatabase();
         return true;
       }
 
-      const appointment = {
-        id: body.id || crypto.randomUUID(),
-        ...body
-      };
-
-      appointments.push(appointment);
-      await writeDatabase(database);
-
-      sendJson(response, 201, appointment);
+      try {
+        applyAction(database, body.action, body.payload);
+        await writeDatabase(database);
+        sendJson(response, 200, { ok: true, state: publicState(database) });
+      } catch (error) {
+        sendJson(response, 400, { ok: false, error: error.message });
+      }
       return true;
     }
   }
@@ -256,7 +338,7 @@ const database = await readDatabase();
 
   if (url.pathname === "/api/state") {
     if (request.method === "GET") {
-      sendJson(response, 200, database);
+      sendJson(response, 200, { state: publicState(database) });
       return true;
     }
 
@@ -265,7 +347,7 @@ const database = await readDatabase();
 
       await writeDatabase(body);
 
-      sendJson(response, 200, body);
+      sendJson(response, 200, { ok: true, state: publicState(body) });
       return true;
     }
   }

@@ -49,7 +49,8 @@ function normalizeState(data) {
 
   merged.services = Array.isArray(source.services) ? source.services : base.services;
   merged.barbers = Array.isArray(source.barbers) ? source.barbers : base.barbers;
-  merged.appointments = Array.isArray(source.appointments) ? source.appointments : base.appointments;
+  merged.appointments = (Array.isArray(source.appointments) ? source.appointments : base.appointments)
+    .filter((appointment) => !appointment.action);
   merged.blocks = Array.isArray(source.blocks) ? source.blocks : base.blocks;
   merged.products = Array.isArray(source.products) ? source.products : base.products;
   merged.sales = Array.isArray(source.sales) ? source.sales : base.sales;
