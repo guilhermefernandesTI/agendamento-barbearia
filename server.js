@@ -132,11 +132,12 @@ function getTenant(data, slug = "principal") {
   if (!Array.isArray(data.tenants) || !data.tenants.length) {
     data.tenants = [{ id: "principal", slug: "principal", name: "Barbearia Principal" }];
   }
-  return data.tenants.find((tenant) => tenant.slug === slug) || data.tenants[0];
+  return data.tenants.find((tenant) => tenant.slug === slug) || (slug === "principal" ? data.tenants[0] : null);
 }
 
 function publicState(data, slug = "principal") {
   const tenant = getTenant(data, slug);
+  if (!tenant) return null;
   const state = { tenants: [tenant] };
   const scoped = (name) => getCollection(data, name).filter((item) => !item.tenantId || item.tenantId === tenant.id);
   state.services = scoped("services");
@@ -290,7 +291,12 @@ async function handleApi(request, response, url) {
     const tenantSlug = url.searchParams.get("tenant") || "principal";
 
     if (request.method === "GET") {
-      sendJson(response, 200, { state: publicState(database, tenantSlug) });
+      const state = publicState(database, tenantSlug);
+      if (!state) {
+        sendJson(response, 404, { error: "Barbearia não encontrada." });
+        return true;
+      }
+      sendJson(response, 200, { state });
       return true;
     }
 
