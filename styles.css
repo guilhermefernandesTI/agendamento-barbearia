@@ -315,6 +315,17 @@ label,
   z-index: 2;
 }
 
+.native-date-picker {
+  position: absolute;
+  top: 7px;
+  right: 14px;
+  width: 32px;
+  height: 32px;
+  opacity: 0.01;
+  cursor: pointer;
+  z-index: 3;
+}
+
 .date-picker-row > #dateInput {
   padding-right: 56px;
 }

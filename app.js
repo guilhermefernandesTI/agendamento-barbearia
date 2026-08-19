@@ -139,6 +139,7 @@ const els = {
   barberSelect: document.querySelector("#barberSelect"),
   dateInput: document.querySelector("#dateInput"),
   openDatePicker: document.querySelector("#openDatePicker"),
+  nativeDatePicker: document.querySelector("#nativeDatePicker"),
   notesInput: document.querySelector("#notesInput"),
   timeGrid: document.querySelector("#timeGrid"),
   timeInput: document.querySelector("#timeInput"),
@@ -238,6 +239,16 @@ function parseDateInput(input) {
 
 function setDateInput(input, isoDate) {
   if (input) input.value = formatDate(isoDate);
+}
+
+function maskDateInput(event) {
+  const input = event.currentTarget;
+  const digits = input.value.replace(/\D/g, "").slice(0, 8);
+  const parts = [];
+  if (digits.length > 0) parts.push(digits.slice(0, 2));
+  if (digits.length > 2) parts.push(digits.slice(2, 4));
+  if (digits.length > 4) parts.push(digits.slice(4, 8));
+  input.value = parts.join("/");
 }
 
 function currentMonthIso() {
@@ -1331,27 +1342,25 @@ els.dateInput.addEventListener("change", () => {
   syncState();
 });
 
+[
+  els.dateInput,
+  els.scheduleDate,
+  els.blockDate,
+  els.saleDate,
+].filter(Boolean).forEach((input) => input.addEventListener("input", maskDateInput));
+
+els.nativeDatePicker?.addEventListener("change", () => {
+  setDateInput(els.dateInput, els.nativeDatePicker.value);
+  renderTimes();
+});
+
 els.openDatePicker?.addEventListener("click", () => {
-  const picker = document.createElement("input");
-  picker.id = "temporaryDatePicker";
-  picker.type = "date";
-  picker.min = todayIso();
-  picker.value = parseDateInput(els.dateInput) || todayIso();
-  const buttonRect = els.openDatePicker.getBoundingClientRect();
-  picker.style.position = "fixed";
-  picker.style.left = `${buttonRect.left}px`;
-  picker.style.top = `${Math.max(8, buttonRect.top - 320)}px`;
-  picker.style.width = `${buttonRect.width}px`;
-  picker.style.height = `${buttonRect.height}px`;
-  picker.style.opacity = "0";
-  document.body.appendChild(picker);
-  picker.addEventListener("change", () => {
-    setDateInput(els.dateInput, picker.value);
-    picker.remove();
-    renderTimes();
-  }, { once: true });
-  if (typeof picker.showPicker === "function") picker.showPicker();
-  else picker.click();
+  if (els.nativeDatePicker) {
+    els.nativeDatePicker.min = todayIso();
+    els.nativeDatePicker.value = parseDateInput(els.dateInput) || todayIso();
+    if (typeof els.nativeDatePicker.showPicker === "function") els.nativeDatePicker.showPicker();
+    else els.nativeDatePicker.click();
+  }
 });
 
 els.scheduleDate.addEventListener("change", () => {
