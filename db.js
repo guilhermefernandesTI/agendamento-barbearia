@@ -8,7 +8,6 @@ const dbDir = path.join(process.cwd(), "db");
 const dbFile = path.join(dbDir, "local-state.json");
 
 const defaultState = {
-  tenants: [{ id: "principal", slug: "principal", name: "Barbearia Principal" }],
   services: [],
   barbers: [],
   appointments: [],
@@ -47,10 +46,6 @@ function normalizeState(data) {
   const base = cloneDefaultState();
   const source = data && typeof data === "object" ? data : {};
   const merged = { ...base, ...source };
-
-  merged.tenants = Array.isArray(source.tenants) && source.tenants.length
-    ? source.tenants
-    : base.tenants;
 
   merged.services = Array.isArray(source.services) ? source.services : base.services;
   merged.barbers = Array.isArray(source.barbers) ? source.barbers : base.barbers;

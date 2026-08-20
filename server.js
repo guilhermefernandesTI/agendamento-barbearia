@@ -128,49 +128,19 @@ function getCollection(data, name) {
   return data[name];
 }
 
-function getTenant(data, slug = "principal") {
-  if (!Array.isArray(data.tenants) || !data.tenants.length) {
-    data.tenants = [{ id: "principal", slug: "principal", name: "Barbearia Principal" }];
-  }
-  return data.tenants.find((tenant) => tenant.slug === slug) || (slug === "principal" ? data.tenants[0] : null);
-}
-
-function publicState(data, slug = "principal") {
-  const tenant = getTenant(data, slug);
-  if (!tenant) return null;
-  const state = { tenants: [tenant] };
-  const scoped = (name) => getCollection(data, name).filter((item) => !item.tenantId || item.tenantId === tenant.id);
-  state.services = scoped("services");
-  state.barbers = scoped("barbers").map(({ password, ...barber }) => barber);
-  state.appointments = scoped("appointments").filter((item) => !item.action);
-  state.blocks = scoped("blocks");
-  state.products = scoped("products");
-  state.sales = scoped("sales");
+function publicState(data) {
+  const state = {};
+  state.services = getCollection(data, "services");
+  state.barbers = getCollection(data, "barbers").map(({ password, ...barber }) => barber);
+  state.appointments = getCollection(data, "appointments").filter((item) => !item.action);
+  state.blocks = getCollection(data, "blocks");
+  state.products = getCollection(data, "products");
+  state.sales = getCollection(data, "sales");
   return state;
 }
 
-function centralState(data, tenantSlug = null) {
-  const principal = getTenant(data, "principal");
-  const tenants = Array.isArray(data.tenants) && data.tenants.length ? data.tenants : [principal];
-
-  if (tenantSlug) {
-    const tenant = getTenant(data, tenantSlug);
-    if (!tenant) return null;
-    const tenantId = tenant.id;
-    return {
-      tenants: [tenant],
-      barbers: getCollection(data, "barbers").filter((barber) => !barber.tenantId || barber.tenantId === tenantId),
-    };
-  }
-
-  return {
-    tenants,
-    barbers: getCollection(data, "barbers"),
-  };
-}
-
 function createSession(user) {
-  const payload = Buffer.from(JSON.stringify({ id: user.id, role: user.role, tenantSlug: user.tenantSlug || null, exp: Date.now() + 86400000 })).toString("base64url");
+  const payload = Buffer.from(JSON.stringify({ id: user.id, role: user.role, exp: Date.now() + 86400000 })).toString("base64url");
   const signature = createHmac("sha256", sessionSecret).update(payload).digest("base64url");
   return `${payload}.${signature}`;
 }
@@ -193,31 +163,29 @@ function hasValidSession(request) {
   return Boolean(getSessionUser(request));
 }
 
-function applyAction(database, action, payload = {}, tenantSlug = "principal") {
+function applyAction(database, action, payload = {}) {
   const collection = (name) => getCollection(database, name);
-  const tenant = getTenant(database, payload.tenantSlug || tenantSlug);
-  const withTenant = (item) => ({ ...item, tenantId: item.tenantId || tenant.id });
 
   if (action === "createAppointment") {
-    collection("appointments").push(withTenant({ id: payload.id || crypto.randomUUID(), ...payload }));
+    collection("appointments").push({ id: payload.id || crypto.randomUUID(), ...payload });
     return;
   }
 
   if (action === "updateAppointment") {
-    const appointment = collection("appointments").find((item) => item.id === payload.id && (!item.tenantId || item.tenantId === tenant.id));
+    const appointment = collection("appointments").find((item) => item.id === payload.id);
     if (!appointment) throw new Error("Agendamento não encontrado.");
     appointment.status = payload.status;
     return;
   }
 
   if (action === "addService") {
-    collection("services").push(withTenant({ id: payload.id || crypto.randomUUID(), ...payload }));
+    collection("services").push({ id: payload.id || crypto.randomUUID(), ...payload });
     return;
   }
 
   if (action === "removeService") {
     if (collection("services").length <= 1) throw new Error("Mantenha pelo menos um serviço cadastrado.");
-    database.services = collection("services").filter((item) => !(item.id === payload.id && (!item.tenantId || item.tenantId === tenant.id)));
+    database.services = collection("services").filter((item) => item.id !== payload.id);
     return;
   }
 
@@ -227,75 +195,45 @@ function applyAction(database, action, payload = {}, tenantSlug = "principal") {
     if (collection("barbers").some((item) => String(item.username || "").toLowerCase() === username.toLowerCase())) {
       throw new Error("Já existe um barbeiro com esse nome de usuário.");
     }
-    collection("barbers").push(withTenant({ id: payload.id || crypto.randomUUID(), ...payload, username }));
+    collection("barbers").push({ id: payload.id || crypto.randomUUID(), ...payload, username });
     return;
   }
 
   if (action === "removeBarber") {
     if (collection("barbers").length <= 1) throw new Error("Mantenha pelo menos um barbeiro cadastrado.");
-    database.barbers = collection("barbers").filter((item) => !(item.id === payload.id && (!item.tenantId || item.tenantId === tenant.id)));
+    database.barbers = collection("barbers").filter((item) => item.id !== payload.id);
     return;
   }
 
   if (action === "addBlock") {
-    collection("blocks").push(withTenant({ id: payload.id || crypto.randomUUID(), ...payload }));
+    collection("blocks").push({ id: payload.id || crypto.randomUUID(), ...payload });
     return;
   }
 
   if (action === "addProduct") {
-    collection("products").push(withTenant({ id: payload.id || crypto.randomUUID(), ...payload }));
+    collection("products").push({ id: payload.id || crypto.randomUUID(), ...payload });
     return;
   }
 
   if (action === "removeProduct") {
-    database.products = collection("products").filter((item) => !(item.id === payload.id && (!item.tenantId || item.tenantId === tenant.id)));
+    database.products = collection("products").filter((item) => item.id !== payload.id);
     return;
   }
 
   if (action === "addSale") {
-    if (!collection("sales").some((item) => item.id === payload.id)) collection("sales").push(withTenant({ id: payload.id || crypto.randomUUID(), ...payload }));
+    if (!collection("sales").some((item) => item.id === payload.id)) collection("sales").push({ id: payload.id || crypto.randomUUID(), ...payload });
     return;
   }
 
   if (action === "updateSale") {
-    const sale = collection("sales").find((item) => item.id === payload.id && (!item.tenantId || item.tenantId === tenant.id));
+    const sale = collection("sales").find((item) => item.id === payload.id);
     if (!sale) throw new Error("Lançamento não encontrado.");
     Object.assign(sale, payload);
     return;
   }
 
   if (action === "removeSale") {
-    database.sales = collection("sales").filter((item) => !(item.id === payload.id && (!item.tenantId || item.tenantId === tenant.id)));
-    return;
-  }
-
-  if (action === "createTenant") {
-    const name = String(payload.name || "").trim();
-    const slug = String(payload.slug || "").trim().toLowerCase().replace(/[^a-z0-9-]/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
-    if (!name || !slug) throw new Error("Informe o nome e o identificador da barbearia.");
-    if (collection("tenants").some((item) => item.slug === slug)) throw new Error("Esse link já está em uso.");
-    collection("tenants").push({ id: crypto.randomUUID(), slug, name });
-    return;
-  }
-
-  if (action === "removeTenant") {
-    const slug = String(payload.slug || "").trim();
-    const target = collection("tenants").find((item) => item.slug === slug);
-    if (!target) throw new Error("Barbearia não encontrada.");
-    if (slug === "principal" || target.id === "principal") throw new Error("A barbearia principal não pode ser removida.");
-    if (collection("tenants").length <= 1) throw new Error("Mantenha pelo menos uma barbearia.");
-    database.tenants = collection("tenants").filter((item) => item.slug !== slug);
-
-    const tenantId = target.id;
-    const removeScoped = (name) => {
-      database[name] = collection(name).filter((item) => item.tenantId !== tenantId);
-    };
-    removeScoped("services");
-    removeScoped("barbers");
-    removeScoped("appointments");
-    removeScoped("blocks");
-    removeScoped("products");
-    removeScoped("sales");
+    database.sales = collection("sales").filter((item) => item.id !== payload.id);
     return;
   }
 
@@ -322,15 +260,9 @@ async function handleApi(request, response, url) {
 
   if (url.pathname === "/api/agenda") {
     const appointments = getCollection(database, "appointments");
-    const tenantSlug = url.searchParams.get("tenant") || "principal";
 
     if (request.method === "GET") {
-      const state = publicState(database, tenantSlug);
-      if (!state) {
-        sendJson(response, 404, { error: "Barbearia não encontrada." });
-        return true;
-      }
-      sendJson(response, 200, { state });
+      sendJson(response, 200, { state: publicState(database) });
       return true;
     }
 
@@ -350,9 +282,7 @@ async function handleApi(request, response, url) {
           return true;
         }
 
-        const tenant = getTenant(database, body.payload?.tenantSlug || tenantSlug);
         const barber = getCollection(database, "barbers").find((item) => {
-          if (item.tenantId && item.tenantId !== tenant.id) return false;
           const barberUser = String(item.username || item.name || "").trim().toLowerCase();
           const barberName = String(item.name || "").trim().toLowerCase();
           const barberPassword = String(item.password || "123").trim();
@@ -365,7 +295,6 @@ async function handleApi(request, response, url) {
         }
 
         const barberRole = barber.role === "admin" ? "admin" : "barber";
-        const barberTenantSlug = tenant.slug;
 
         sendJson(response, 200, {
           ok: true,
@@ -373,10 +302,9 @@ async function handleApi(request, response, url) {
             id: barber.id,
             name: barber.name,
             username: barber.username || barber.name,
-            role: barberRole,
-            tenantSlug: barberTenantSlug
+            role: barberRole
           },
-          token: createSession({ id: barber.id, role: barberRole, tenantSlug: barberTenantSlug })
+          token: createSession({ id: barber.id, role: barberRole })
         });
         return true;
       }
@@ -386,43 +314,9 @@ async function handleApi(request, response, url) {
           sendJson(response, 401, { ok: false, error: "Acesso restrito. Faça login novamente." });
           return true;
         }
-        applyAction(database, body.action, body.payload, tenantSlug);
+        applyAction(database, body.action, body.payload);
         await writeDatabase(database);
-        sendJson(response, 200, { ok: true, state: publicState(database, tenantSlug) });
-      } catch (error) {
-        sendJson(response, 400, { ok: false, error: error.message });
-      }
-      return true;
-    }
-  }
-
-  if (url.pathname === "/api/central") {
-    const sessionUser = getSessionUser(request);
-    if (sessionUser?.role !== "admin") {
-      sendJson(response, 401, { ok: false, error: "Acesso restrito." });
-      return true;
-    }
-    const sessionTenantSlug = sessionUser.tenantSlug || null;
-    if (request.method === "GET") {
-      const state = centralState(database, sessionTenantSlug);
-      if (!state) {
-        sendJson(response, 404, { ok: false, error: "Barbearia não encontrada." });
-        return true;
-      }
-      sendJson(response, 200, state);
-      return true;
-    }
-    if (request.method === "POST") {
-      const body = await getBody(request);
-      try {
-        const targetSlug = body.payload?.tenantSlug || sessionTenantSlug || "principal";
-        if (sessionTenantSlug && targetSlug !== sessionTenantSlug) {
-          throw new Error("Você só pode gerenciar a sua própria barbearia.");
-        }
-        applyAction(database, body.action, body.payload, targetSlug);
-        await writeDatabase(database);
-        const state = centralState(database, sessionTenantSlug);
-        sendJson(response, 200, { ok: true, ...state });
+        sendJson(response, 200, { ok: true, state: publicState(database) });
       } catch (error) {
         sendJson(response, 400, { ok: false, error: error.message });
       }
@@ -443,7 +337,7 @@ async function handleApi(request, response, url) {
     const services = getCollection(database, "services");
 
     if (request.method === "GET") {
-      sendJson(response, 200, publicState(database, url.searchParams.get("tenant") || "principal").services);
+      sendJson(response, 200, publicState(database).services);
       return true;
     }
 

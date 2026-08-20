@@ -3,10 +3,6 @@ const authKey = "agenda-barbearia-admin-auth";
 const authRoleKey = "agenda-barbearia-auth-role";
 const loggedBarberKey = "agenda-barbearia-logged-barber";
 const authTokenKey = "agenda-barbearia-auth-token";
-const tenantSlug = (() => {
-  const firstPath = window.location.pathname.split("/").filter(Boolean)[0];
-  return firstPath && !firstPath.includes(".") ? firstPath : "principal";
-})();
 
 const defaultState = {
   services: [],
@@ -22,8 +18,7 @@ function cloneDefaultState() {
 }
 
 function apiPath(path) {
-  const separator = path.includes("?") ? "&" : "?";
-  return `${path}${separator}tenant=${encodeURIComponent(tenantSlug)}`;
+  return path;
 }
 
 function normalizeState(rawState) {
@@ -164,10 +159,6 @@ const els = {
   newBarberUsername: document.querySelector("#newBarberUsername"),
   newBarberPassword: document.querySelector("#newBarberPassword"),
   barbersList: document.querySelector("#barbersList"),
-  tenantForm: document.querySelector("#tenantForm"),
-  newTenantName: document.querySelector("#newTenantName"),
-  newTenantSlug: document.querySelector("#newTenantSlug"),
-  tenantsList: document.querySelector("#tenantsList"),
   blockForm: document.querySelector("#blockForm"),
   blockDate: document.querySelector("#blockDate"),
   blockBarber: document.querySelector("#blockBarber"),
@@ -342,7 +333,7 @@ async function sendRemoteAction(action, payload) {
         "Content-Type": "application/json",
         ...(sessionStorage.getItem(authTokenKey) ? { Authorization: `Bearer ${sessionStorage.getItem(authTokenKey)}` } : {}),
       },
-      body: JSON.stringify({ action, payload: { ...payload, tenantSlug } }),
+      body: JSON.stringify({ action, payload }),
     });
   } catch {
     throw makeApiError("A API local não está disponível neste modo.", 0, true);
@@ -1236,7 +1227,7 @@ els.loginForm.addEventListener("submit", async (event) => {
       const response = await fetch(apiPath("/api/agenda"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "login", payload: { username, password, tenantSlug } }),
+        body: JSON.stringify({ action: "login", payload: { username, password } }),
       });
       const data = await response.json();
       if (!response.ok || !data.ok) {
