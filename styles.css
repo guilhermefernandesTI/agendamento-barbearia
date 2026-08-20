@@ -609,3 +609,166 @@ textarea:focus {
   text-align: center;
   font-size: 0.9rem;
 }
+
+/* ===== RESPONSIVE MOBILE ===== */
+@media (max-width: 768px) {
+  .app-shell {
+    padding: 12px;
+  }
+
+  .topbar {
+    padding: 6px 0 12px;
+  }
+
+  .hero-section {
+    grid-template-columns: 1fr;
+    padding: 20px;
+    min-height: auto;
+  }
+
+  .hero-copy h2 {
+    font-size: clamp(1.6rem, 5vw, 2.4rem);
+  }
+
+  .tabs {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    gap: 6px;
+    margin: 14px 0;
+    padding-bottom: 4px;
+  }
+
+  .tab {
+    flex: 0 0 auto;
+    min-width: 100px;
+    white-space: nowrap;
+    padding: 0 14px;
+  }
+
+  .section-heading {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .section-heading h3 {
+    font-size: 1.3rem;
+  }
+
+  .inline-filters {
+    width: 100%;
+  }
+
+  .inline-label {
+    width: 100%;
+  }
+
+  .inline-label input,
+  .inline-label select {
+    width: 100%;
+    flex: 1;
+  }
+
+  .booking-form {
+    grid-template-columns: 1fr;
+    padding: 14px;
+  }
+
+  .login-form {
+    padding: 14px;
+  }
+
+  .time-grid {
+    grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+  }
+
+  .appointment {
+    grid-template-columns: 1fr;
+    gap: 8px;
+    padding: 10px;
+  }
+
+  .appointment-time {
+    font-size: 1rem;
+  }
+
+  .appointment-actions {
+    justify-content: flex-start;
+    gap: 6px;
+  }
+
+  .appointment-actions .ghost-button,
+  .appointment-actions .danger-button {
+    flex: 1;
+    min-height: 40px;
+    padding: 0 8px;
+    font-size: 0.82rem;
+  }
+
+  .kpi-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .kpi-value {
+    font-size: 1.6rem;
+  }
+
+  .admin-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .admin-grid .admin-box[style*="grid-column"] {
+    grid-column: auto !important;
+  }
+
+  .admin-box {
+    padding: 12px;
+  }
+
+  .inline-fields {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .table-row {
+    padding: 8px 10px;
+  }
+
+  .table-row-action {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .table-row-action .danger-button {
+    width: 100%;
+  }
+
+  .user-badge {
+    padding: 8px 12px;
+    font-size: 0.85rem;
+  }
+
+  .primary-button,
+  .secondary-button {
+    min-height: 44px;
+  }
+}
+
+/* ====== RESPONSIVE: Tablets / Small screens ===== */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .admin-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .booking-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .kpi-grid {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  }
+}

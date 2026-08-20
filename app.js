@@ -860,10 +860,10 @@ function renderSchedule() {
       );
       return `
         <article class="appointment ${item.status === "concluido" ? "done" : ""}">
-          <div class="appointment-time">${escapeHtml(formatDate(item.date))} ${escapeHtml(item.time)}</div>
+          <div class="appointment-time">${escapeHtml(item.time)}</div>
           <div>
             <strong>${escapeHtml(item.name)}</strong>
-            <p>${escapeHtml(service.name)} com ${escapeHtml(barber?.name ?? "Barbeiro removido")}</p>
+            <p>${escapeHtml(formatDate(item.date))} - ${escapeHtml(service.name)} con ${escapeHtml(barber?.name ?? "Barbeiro removido")}</p>
             <p>${escapeHtml(item.phone)}${item.notes ? ` - ${escapeHtml(item.notes)}` : ""}</p>
           </div>
           <div class="appointment-actions">
@@ -994,10 +994,10 @@ function renderReports() {
       const barber = getBarber(item.barberId);
       return `
         <article class="appointment ${item.status === "concluido" ? "done" : ""}">
-          <div class="appointment-time">${escapeHtml(formatDate(item.date))} ${escapeHtml(item.time)}</div>
+          <div class="appointment-time">${escapeHtml(item.time)}</div>
           <div>
             <strong>${escapeHtml(item.name)} (${escapeHtml(item.status)})</strong>
-            <p>${escapeHtml(service.name)} - ${money(service.price)} com ${escapeHtml(barber?.name ?? "Barbeiro")}</p>
+            <p>${escapeHtml(formatDate(item.date))} - ${escapeHtml(service.name)} - ${money(service.price)} con ${escapeHtml(barber?.name ?? "Barbeiro")}</p>
           </div>
         </article>
       `;
