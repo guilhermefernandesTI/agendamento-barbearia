@@ -528,6 +528,14 @@ function localApplyAction(action, payload) {
         barberId: payload.barberId || getCurrentBarberId(),
       });
       return;
+    case "updateProduct": {
+      const product = state.products.find((item) => item.id === payload.id);
+      if (!product) throw new Error("Produto não encontrado.");
+      if (payload.stock !== undefined) product.stock = Number(payload.stock);
+      if (payload.price !== undefined) product.price = Number(payload.price);
+      if (payload.name !== undefined) product.name = payload.name;
+      return;
+    }
     case "removeProduct":
       state.products = state.products.filter((item) => item.id !== payload.id);
       return;
@@ -596,10 +604,19 @@ function localApplyAction(action, payload) {
   }
 }
 
-function showToast(message) {
-  els.toast.textContent = message;
-  els.toast.classList.add("show");
-  window.setTimeout(() => els.toast.classList.remove("show"), 2800);
+function showToast(message, type = "info") {
+  const icons = {
+    success: "✅",
+    error: "❌",
+    info: "ℹ️",
+  };
+  els.toast.className = "toast";
+  els.toast.classList.add("show", type);
+  els.toast.innerHTML = `<span class="toast-icon">${icons[type] || icons.info}</span>${escapeHtml(message)}`;
+  window.clearTimeout(showToast._timer);
+  showToast._timer = window.setTimeout(() => {
+    els.toast.classList.remove("show");
+  }, 3200);
 }
 
 function isViewAllowed(view) {
@@ -637,7 +654,7 @@ async function persistChange(action, payload) {
       renderAll();
       return { ok: true, state };
     }
-    showToast(error?.message || "Não foi possível salvar as alterações.");
+    showToast(error?.message || "Não foi possível salvar as alterações.", "error");
     throw error;
   }
 }
@@ -1074,6 +1091,7 @@ function renderFinancial() {
             <small>Preço: ${money(p.price)} | Estoque: ${p.stock} un</small>
           </div>
           <div class="table-row-action">
+            <button class="ghost-button" type="button" data-edit-stock="${escapeHtml(p.id)}">Editar Estoque</button>
             <button class="danger-button" type="button" data-remove-product="${escapeHtml(p.id)}">Remover</button>
           </div>
         </div>
@@ -1200,7 +1218,7 @@ els.tabs.forEach((tab) => {
     const viewName = tab.dataset.view;
     if (!viewName) return;
     if ((viewName === "schedule" || viewName === "reports" || viewName === "financial" || viewName === "admin") && !getCurrentRole()) {
-      showToast("Digite o usuário e a senha para acessar a área restrita.");
+      showToast("Digite o usuário e a senha para acessar a área restrita.", "info");
       showView("login");
       return;
     }
@@ -1216,7 +1234,7 @@ els.loginForm.addEventListener("submit", async (event) => {
   const password = els.adminPassword ? els.adminPassword.value.trim() : "";
 
   if (!username || !password) {
-    showToast("Preencha o nome/usuário e a senha.");
+    showToast("Preencha o nome/usuário e a senha.", "error");
     return;
   }
 
@@ -1252,12 +1270,12 @@ els.loginForm.addEventListener("submit", async (event) => {
     if (els.loginUsername) els.loginUsername.value = "";
     if (els.adminPassword) els.adminPassword.value = "";
 
-    showToast(`Bem-vindo, ${loggedBarber.name}!`);
+    showToast(`Bem-vindo, ${loggedBarber.name}!`, "success");
     renderAll();
     showView(authRole === "admin" ? "admin" : "schedule");
     await syncState();
   } catch (err) {
-    showToast(err?.message || "Erro ao realizar login. Tente novamente.");
+    showToast(err?.message || "Erro ao realizar login. Tente novamente.", "error");
   }
 });
 
@@ -1269,7 +1287,7 @@ els.logoutButton.addEventListener("click", () => {
   sessionStorage.removeItem(authRoleKey);
   sessionStorage.removeItem(loggedBarberKey);
   sessionStorage.removeItem(authTokenKey);
-  showToast("Você saiu da área restrita.");
+  showToast("Você saiu da área restrita.", "info");
   renderAll();
   showView("booking");
 });
@@ -1288,17 +1306,17 @@ els.bookingForm.addEventListener("submit", async (event) => {
 
   const appointmentDate = parseDateInput(els.dateInput);
   if (isSunday(appointmentDate)) {
-    showToast("A barbearia está fechada aos domingos.");
+    showToast("A barbearia está fechada aos domingos.", "error");
     return;
   }
 
   if (!els.timeInput.value) {
-    showToast("Escolha um horário disponível.");
+    showToast("Escolha um horário disponível.", "error");
     return;
   }
 
   if (isPastTime(appointmentDate, els.timeInput.value)) {
-    showToast("Não é possível agendar em horários passados.");
+    showToast("Não é possível agendar em horários passados.", "error");
     return;
   }
 
@@ -1322,7 +1340,7 @@ els.bookingForm.addEventListener("submit", async (event) => {
     await persistChange("createAppointment", appointment);
     els.bookingForm.reset();
     setDateInput(els.dateInput, todayIso());
-    showToast("Agendamento confirmado.");
+    showToast("Agendamento confirmado com sucesso!", "success");
   } catch (error) {
     // Error handled in persistChange
   }
@@ -1391,7 +1409,7 @@ els.productForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const barberId = getCurrentBarberId();
   if (!barberId) {
-    showToast("Entre com um barbeiro para cadastrar produtos.");
+    showToast("Entre com um barbeiro para cadastrar produtos.", "error");
     return;
   }
 
@@ -1400,11 +1418,11 @@ els.productForm.addEventListener("submit", async (event) => {
   const stock = Number(els.newProductStock.value || 0);
 
   if (!name) {
-    showToast("Informe o nome do produto.");
+    showToast("Informe o nome do produto.", "error");
     return;
   }
   if (Number.isNaN(price) || price < 0 || Number.isNaN(stock) || stock < 0) {
-    showToast("Informe preço e estoque válidos.");
+    showToast("Informe preço e estoque válidos.", "error");
     return;
   }
 
@@ -1419,7 +1437,7 @@ els.productForm.addEventListener("submit", async (event) => {
   try {
     await persistChange("addProduct", product);
     els.productForm.reset();
-    showToast("Produto cadastrado com sucesso.");
+    showToast("Produto cadastrado com sucesso!", "success");
   } catch (error) {
     // Error handled in persistChange
   }
@@ -1429,7 +1447,7 @@ els.saleForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const barberId = getCurrentBarberId();
   if (!barberId) {
-    showToast("Entre com um barbeiro para registrar lançamentos.");
+    showToast("Entre com um barbeiro para registrar lançamentos.", "error");
     return;
   }
 
@@ -1443,11 +1461,11 @@ els.saleForm.addEventListener("submit", async (event) => {
   const description = els.saleDescription.value.trim();
 
   if (!description) {
-    showToast("Informe uma descrição para o lançamento.");
+    showToast("Informe uma descrição para o lançamento.", "error");
     return;
   }
   if (Number.isNaN(amount) || amount < 0 || Number.isNaN(quantity) || quantity < 1) {
-    showToast("Informe quantidade e valor válidos.");
+    showToast("Informe quantidade e valor válidos.", "error");
     return;
   }
 
@@ -1466,7 +1484,7 @@ els.saleForm.addEventListener("submit", async (event) => {
     await persistChange("addSale", sale);
     els.saleForm.reset();
     setDateInput(els.saleDate, todayIso());
-    showToast("Venda registrada com sucesso.");
+    showToast("Venda registrada com sucesso!", "success");
   } catch (error) {
     // Error handled in persistChange
   }
@@ -1482,7 +1500,7 @@ els.appointmentsList.addEventListener("click", async (event) => {
 
   try {
     await persistChange("updateAppointment", { id: item.id, status });
-    showToast(doneId ? "Atendimento concluído." : "Agendamento cancelado.");
+    showToast(doneId ? "Atendimento concluído com sucesso!" : "Agendamento cancelado.", doneId ? "success" : "info");
   } catch (error) {
     // Error handled in persistChange
   }
@@ -1492,7 +1510,7 @@ els.serviceForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const barberId = getCurrentBarberId();
   if (!barberId) {
-    showToast("Entre com um barbeiro para cadastrar serviços.");
+    showToast("Entre com um barbeiro para cadastrar serviços.", "error");
     return;
   }
   const name = els.newServiceName.value.trim();
@@ -1500,11 +1518,11 @@ els.serviceForm.addEventListener("submit", async (event) => {
   const duration = Number(els.newServiceDuration.value || 60);
 
   if (!name) {
-    showToast("Informe o nome do serviço.");
+    showToast("Informe o nome do serviço.", "error");
     return;
   }
   if (Number.isNaN(price) || price < 0 || Number.isNaN(duration) || duration < 15) {
-    showToast("Informe preço e duração válidos.");
+    showToast("Informe preço e duração válidos.", "error");
     return;
   }
 
@@ -1519,7 +1537,7 @@ els.serviceForm.addEventListener("submit", async (event) => {
   try {
     await persistChange("addService", service);
     els.serviceForm.reset();
-    showToast("Serviço adicionado.");
+    showToast("Serviço adicionado com sucesso!", "success");
   } catch (error) {
     // Error handled in persistChange
   }
@@ -1532,12 +1550,12 @@ els.barberForm.addEventListener("submit", async (event) => {
   const password = els.newBarberPassword ? els.newBarberPassword.value.trim() : "123";
 
   if (!name || !username || !password) {
-    showToast("Preencha nome, usuário e senha.");
+    showToast("Preencha nome, usuário e senha.", "error");
     return;
   }
 
   if (state.barbers.some((item) => String(item.username || "").toLowerCase() === username.toLowerCase())) {
-    showToast("Já existe um barbeiro com esse nome de usuário.");
+    showToast("Já existe um barbeiro com esse nome de usuário.", "error");
     return;
   }
 
@@ -1551,7 +1569,7 @@ els.barberForm.addEventListener("submit", async (event) => {
   try {
     await persistChange("addBarber", barber);
     els.barberForm.reset();
-    showToast(`Login do barbeiro ${name} criado com sucesso!`);
+    showToast(`Login do barbeiro ${name} criado com sucesso!`, "success");
   } catch (error) {
     // Handled in persistChange
   }
@@ -1561,13 +1579,13 @@ els.blockForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const barberId = getCurrentBarberId();
   if (!barberId) {
-    showToast("Entre com um barbeiro para bloquear horários.");
+    showToast("Entre com um barbeiro para bloquear horários.", "error");
     return;
   }
 
   const blockDate = parseDateInput(els.blockDate);
   if (isSunday(blockDate)) {
-    showToast("A barbearia já fica fechada aos domingos.");
+    showToast("A barbearia já fica fechada aos domingos.", "error");
     return;
   }
 
@@ -1580,7 +1598,7 @@ els.blockForm.addEventListener("submit", async (event) => {
 
   try {
     await persistChange("addBlock", block);
-    showToast("Horário bloqueado.");
+    showToast("Horário bloqueado com sucesso!", "success");
   } catch (error) {
     // Error handled in persistChange
   }
@@ -1592,8 +1610,9 @@ document.addEventListener("click", async (event) => {
   const productId = event.target.dataset.removeProduct;
   const saleId = event.target.dataset.removeSale;
   const editSaleId = event.target.dataset.editSale;
+  const editStockId = event.target.dataset.editStock;
 
-  if (!serviceId && !barberId && !productId && !saleId && !editSaleId) return;
+  if (!serviceId && !barberId && !productId && !saleId && !editSaleId && !editStockId) return;
 
   try {
     if (serviceId) {
@@ -1602,13 +1621,29 @@ document.addEventListener("click", async (event) => {
     if (barberId) {
       await persistChange("removeBarber", { id: barberId });
     }
+    if (editStockId) {
+      const product = state.products.find((item) => item.id === editStockId);
+      if (!product) return;
+
+      const newStock = window.prompt(`Estoque atual de "${product.name}": ${product.stock} un\n\nDigite o novo estoque:`, String(product.stock));
+      if (newStock == null) return;
+
+      const stockValue = Number(newStock);
+      if (Number.isNaN(stockValue) || stockValue < 0) {
+        showToast("Informe um valor de estoque válido.", "error");
+        return;
+      }
+
+      await persistChange("updateProduct", { id: product.id, stock: stockValue });
+      showToast(`Estoque de "${product.name}" atualizado para ${stockValue} un.`, "success");
+    }
     if (productId) {
       await persistChange("removeProduct", { id: productId });
-      showToast("Produto removido.");
+      showToast("Produto removido.", "success");
     }
     if (saleId) {
       await persistChange("removeSale", { id: saleId });
-      showToast("Lançamento removido.");
+      showToast("Lançamento removido.", "success");
     }
     if (editSaleId) {
       const sale = state.sales.find((item) => item.id === editSaleId);
@@ -1630,7 +1665,7 @@ document.addEventListener("click", async (event) => {
         quantity: Number(newQuantity),
         date: newDate.trim() || sale.date,
       });
-      showToast("Lançamento atualizado.");
+      showToast("Lançamento atualizado.", "success");
     }
   } catch (error) {
     // Error handled in persistChange

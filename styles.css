@@ -610,6 +610,58 @@ textarea:focus {
   font-size: 0.9rem;
 }
 
+/* ===== TOAST / POPUP ===== */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(120px);
+  z-index: 9999;
+  min-width: 280px;
+  max-width: 90vw;
+  padding: 14px 20px;
+  border-radius: 10px;
+  background: #24221e;
+  border: 1px solid var(--line);
+  color: var(--text);
+  font-size: 0.92rem;
+  font-weight: 700;
+  text-align: center;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.toast.show {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+}
+
+.toast.success {
+  border-color: rgba(87, 199, 133, 0.5);
+  background: linear-gradient(135deg, #1b2a20, #24221e);
+  color: #baf2cf;
+}
+
+.toast.error {
+  border-color: rgba(228, 107, 107, 0.5);
+  background: linear-gradient(135deg, #2a1b1b, #24221e);
+  color: #ffb8b8;
+}
+
+.toast.info {
+  border-color: rgba(215, 168, 71, 0.5);
+  background: linear-gradient(135deg, #2a241b, #24221e);
+  color: #f6e3b8;
+}
+
+.toast-icon {
+  display: inline-block;
+  margin-right: 8px;
+  font-size: 1.1rem;
+}
+
 /* ===== RESPONSIVE MOBILE ===== */
 @media (max-width: 768px) {
   .app-shell {

@@ -215,6 +215,15 @@ function applyAction(database, action, payload = {}) {
     return;
   }
 
+  if (action === "updateProduct") {
+    const product = collection("products").find((item) => item.id === payload.id);
+    if (!product) throw new Error("Produto não encontrado.");
+    if (payload.stock !== undefined) product.stock = Number(payload.stock);
+    if (payload.price !== undefined) product.price = Number(payload.price);
+    if (payload.name !== undefined) product.name = payload.name;
+    return;
+  }
+
   if (action === "removeProduct") {
     database.products = collection("products").filter((item) => item.id !== payload.id);
     return;
